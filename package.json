@@ -16,7 +16,10 @@
   "keywords": [
     "mongodb",
     "mongo",
+    "collection",
+    "elastic",
     "elasticsearch",
+    "index",
     "sync",
     "change",
     "stream"
