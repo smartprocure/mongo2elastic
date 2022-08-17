@@ -15,7 +15,7 @@ const db = client.db()
 const elastic = new elasticsearch.Client()
 
 const sync = initSync(
-  new Redis({ keyPrefix: 'cratedb:' }),
+  new Redis(),
   db.collection('myCollection'),
   elastic,
   { omit: ['password', 'unneededStuff'] }
