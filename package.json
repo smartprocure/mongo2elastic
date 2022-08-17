@@ -1,7 +1,7 @@
 {
   "name": "mongo2elastic",
   "version": "0.1.0",
-  "description": "Sync MongoDB collections to ElasticSearch",
+  "description": "Sync MongoDB collections to Elasticsearch",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
