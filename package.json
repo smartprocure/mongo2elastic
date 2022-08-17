@@ -6,11 +6,10 @@
   "types": "dist/index.d.ts",
   "type": "module",
   "scripts": {
-    "prepare": "npm test && npm run build",
+    "prepare": "npm run build",
     "clean": "rm -rf dist",
     "build": "npm run clean && tsc --declaration",
     "build:develop": "tsc --watch",
-    "test": "jest",
     "lint": "eslint src/**",
     "fmt": "prettier --ignore-path .gitignore --write './'"
   },
@@ -42,7 +41,7 @@
   "dependencies": {
     "debug": "^4.3.4",
     "lodash": "^4.17.21",
-    "mongochangestream": "^0.8.0",
+    "mongochangestream": "^0.12.0",
     "p-retry": "^5.1.1",
     "print-stats": "^0.2.0",
     "prom-utils": "^0.2.0"
@@ -50,7 +49,6 @@
   "prettier": {
     "semi": false,
     "singleQuote": true,
-    "trailingComma": "es5",
-    "arrowParens": "avoid"
+    "trailingComma": "es5"
   }
 }

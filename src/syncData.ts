@@ -6,34 +6,35 @@ import {
 } from 'mongodb'
 import { default as Redis } from 'ioredis'
 import elasticsearch from '@elastic/elasticsearch'
-import mongoChangeStream, { ScanOptions } from 'mongochangestream'
+import mongoChangeStream, { ScanOptions, getKeys } from 'mongochangestream'
 import { stats } from 'print-stats'
 import { QueueOptions } from 'prom-utils'
+import { SyncOptions } from './types.js'
+import { indexFromCollection } from './util.js'
 
 export const initSync = (
   redis: Redis,
   collection: Collection,
   elastic: elasticsearch.Client,
-  docMapper = _.identity,
-  index: string = `${
-    collection.dbName
-  }_${collection.collectionName.toLowerCase()}`
+  options: SyncOptions & mongoChangeStream.SyncOptions = {}
 ) => {
-  const dbStats = stats()
-
-  const recordMapper = _.flow(_.omit(['_id']), docMapper)
+  const mapper = options.mapper || _.omit(['_id'])
+  const index = options.index || indexFromCollection(collection)
+  const dbStats = stats(index)
 
   const processRecord = async (doc: ChangeStreamDocument) => {
     try {
       if (doc.operationType === 'insert') {
-        const document = recordMapper(doc.fullDocument)
         await elastic.create({
           index,
-          id: doc.fullDocument._id,
-          document,
+          id: doc.fullDocument._id.toString(),
+          document: mapper(doc.fullDocument),
         })
-      } else if (doc.operationType === 'update') {
-        const document = recordMapper(doc.fullDocument)
+      } else if (
+        doc.operationType === 'update' ||
+        doc.operationType === 'replace'
+      ) {
+        const document = doc.fullDocument ? mapper(doc.fullDocument) : {}
         await elastic.index({
           index,
           id: doc.documentKey._id.toString(),
@@ -56,13 +57,13 @@ export const initSync = (
   const processRecords = async (docs: ChangeStreamInsertDocument[]) => {
     try {
       const response = await elastic.bulk({
-        operations: docs.flatMap(doc => [
+        operations: docs.flatMap((doc) => [
           { create: { _index: index, _id: doc.fullDocument._id } },
-          recordMapper(doc.fullDocument),
+          mapper(doc.fullDocument),
         ]),
       })
       if (response.errors) {
-        const errors = response.items.filter(doc => doc.create?.error)
+        const errors = response.items.filter((doc) => doc.create?.error)
         const numErrors = errors.length
         console.error('ERRORS %d', numErrors)
         console.dir(errors, { depth: 10 })
@@ -78,15 +79,19 @@ export const initSync = (
     dbStats.print()
   }
 
-  const sync = mongoChangeStream.initSync(redis)
-
-  const processChangeStream = () =>
-    sync.processChangeStream(collection, processRecord)
-
+  const sync = mongoChangeStream.initSync(redis, options)
+  /**
+   * Process MongoDB change stream for the given collection.
+   */
+  const processChangeStream = (pipeline?: Document[]) =>
+    sync.processChangeStream(collection, processRecord, pipeline)
+  /**
+   * Run initial collection scan. `options.batchSize` defaults to 500.
+   * Sorting defaults to `_id`.
+   */
   const runInitialScan = (options?: QueueOptions & ScanOptions) =>
     sync.runInitialScan(collection, processRecords, options)
-
-  const keys = mongoChangeStream.getKeys(collection)
+  const keys = getKeys(collection)
 
   return { processChangeStream, runInitialScan, keys }
 }
