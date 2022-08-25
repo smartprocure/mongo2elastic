@@ -22,6 +22,27 @@ export const initSync = (
   const index = options.index || indexFromCollection(collection)
   const dbStats = stats(index)
 
+  /**
+   * Turn on ignore_malformed for the index.
+   */
+  const ignoreMalformed = async () => {
+    const obj = {
+      index,
+      body: {
+        settings: {
+          index: {
+            mapping: {
+              ignore_malformed: true,
+            },
+          },
+        },
+      },
+    }
+    await elastic.indices.create(obj)
+  }
+  /**
+   * Process a change stream event.
+   */
   const processRecord = async (doc: ChangeStreamDocument) => {
     try {
       if (doc.operationType === 'insert') {
@@ -53,7 +74,9 @@ export const initSync = (
     }
     dbStats.print()
   }
-
+  /**
+   * Process scan documents.
+   */
   const processRecords = async (docs: ChangeStreamInsertDocument[]) => {
     try {
       const response = await elastic.bulk({
@@ -93,5 +116,5 @@ export const initSync = (
     sync.runInitialScan(collection, processRecords, options)
   const keys = getKeys(collection)
 
-  return { processChangeStream, runInitialScan, keys }
+  return { processChangeStream, runInitialScan, keys, ignoreMalformed }
 }

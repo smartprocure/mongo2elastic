@@ -17,6 +17,8 @@ const elastic = new elasticsearch.Client()
 const sync = initSync(new Redis(), db.collection('myCollection'), elastic, {
   omit: ['password', 'unneededStuff'],
 })
+// Create index with ignore_malformed enabled
+await sync.ignoreMalformed().catch(console.warn)
 // Process change stream events
 sync.processChangeStream()
 // Run initial scan of collection batching documents by 1000
