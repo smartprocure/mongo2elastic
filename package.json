@@ -1,6 +1,6 @@
 {
   "name": "mongo2elastic",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Sync MongoDB collections to Elasticsearch",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -44,7 +44,7 @@
   "peerDependencies": {
     "ioredis": ">= 5.2.3",
     "mongodb": ">= 4.9.0",
-    "@elastic/elasticsearch": ">= 8.2.1"
+    "@elastic/elasticsearch": ">= 7.17.0"
   },
   "dependencies": {
     "debug": "^4.3.4",

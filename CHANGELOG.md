@@ -1,3 +1,7 @@
+# 0.4.1
+
+- Lower required elasticsearch dep.
+
 # 0.3.0
 
 - Added peer dependencies.
