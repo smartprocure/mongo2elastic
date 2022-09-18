@@ -1,3 +1,8 @@
+# 0.5.0
+
+- Latest `mongochangestream`.
+- `detectSchemaChange`.
+
 # 0.4.1
 
 - Lower required elasticsearch dep.

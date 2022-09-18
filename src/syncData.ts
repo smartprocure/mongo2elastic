@@ -6,7 +6,7 @@ import {
 } from 'mongodb'
 import { default as Redis } from 'ioredis'
 import elasticsearch from '@elastic/elasticsearch'
-import mongoChangeStream, { ScanOptions, getKeys } from 'mongochangestream'
+import mongoChangeStream, { ScanOptions } from 'mongochangestream'
 import { stats } from 'print-stats'
 import { QueueOptions } from 'prom-utils'
 import { SyncOptions } from './types.js'
@@ -102,19 +102,25 @@ export const initSync = (
     dbStats.print()
   }
 
-  const sync = mongoChangeStream.initSync(redis, options)
+  const sync = mongoChangeStream.initSync(redis, collection, options)
   /**
    * Process MongoDB change stream for the given collection.
    */
   const processChangeStream = (pipeline?: Document[]) =>
-    sync.processChangeStream(collection, processRecord, pipeline)
+    sync.processChangeStream(processRecord, pipeline)
   /**
    * Run initial collection scan. `options.batchSize` defaults to 500.
    * Sorting defaults to `_id`.
    */
   const runInitialScan = (options?: QueueOptions & ScanOptions) =>
-    sync.runInitialScan(collection, processRecords, options)
-  const keys = getKeys(collection)
+    sync.runInitialScan(processRecords, options)
 
-  return { processChangeStream, runInitialScan, keys, ignoreMalformed }
+  return {
+    processChangeStream,
+    runInitialScan,
+    ignoreMalformed,
+    keys: sync.keys,
+    getCollectionSchema: sync.getCollectionSchema,
+    detectSchemaChange: sync.detectSchemaChange,
+  }
 }

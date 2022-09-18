@@ -20,7 +20,12 @@ const sync = initSync(new Redis(), db.collection('myCollection'), elastic, {
 // Create index with ignore_malformed enabled
 await sync.ignoreMalformed().catch(console.warn)
 // Process change stream events
-sync.processChangeStream()
+const changeStream = await sync.processChangeStream()
+changeStream.start()
+// Detect schema changes and stop change stream if detected
+const schemaChange = await sync.detectSchemaChange(db)
+schemaChange.start()
+schemaChange.emitter.on('change', changeStream.stop)
 // Run initial scan of collection batching documents by 1000
 const options = { batchSize: 1000 }
 retry(() => sync.runInitialScan(options))
