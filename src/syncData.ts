@@ -120,6 +120,8 @@ export const initSync = (
     runInitialScan,
     ignoreMalformed,
     keys: sync.keys,
+    reset: sync.reset,
+    clearCompletedOn: sync.clearCompletedOn,
     getCollectionSchema: sync.getCollectionSchema,
     detectSchemaChange: sync.detectSchemaChange,
   }
