@@ -1,3 +1,7 @@
+# 0.7.0
+
+- Latest `mongochangestream`.
+
 # 0.6.0
 
 - Pass along `reset` and other `mongochangestream` fns.
