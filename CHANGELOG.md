@@ -1,3 +1,7 @@
+# 0.8.0
+
+- Latest `mongochangestream`.
+
 # 0.7.0
 
 - Latest `mongochangestream`.
