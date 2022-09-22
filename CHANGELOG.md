@@ -1,3 +1,7 @@
+# 0.8.1
+
+- Bug fix from `mongochangestream`.
+
 # 0.8.0
 
 - Latest `mongochangestream`.
