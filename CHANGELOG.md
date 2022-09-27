@@ -1,3 +1,9 @@
+# 0.9.0
+
+- Fix `Document` type.
+- Bump `mongodb` peer dep.
+- Latest `mongochangestream`.
+
 # 0.8.2
 
 - Bug fix from `mongochangestream`.
