@@ -1,6 +1,6 @@
 {
   "name": "mongo2elastic",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Sync MongoDB collections to Elasticsearch",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -49,7 +49,7 @@
   "dependencies": {
     "debug": "^4.3.4",
     "lodash": "^4.17.21",
-    "mongochangestream": "^0.20.0",
+    "mongochangestream": "^0.21.0",
     "p-retry": "^5.1.1",
     "print-stats": "^0.2.0",
     "prom-utils": "^0.2.0"

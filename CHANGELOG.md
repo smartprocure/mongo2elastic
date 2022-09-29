@@ -1,3 +1,7 @@
+# 0.10.0
+
+- Latest `mongochangestream` - Ensure that you can call `start` after calling `stop`.
+
 # 0.9.0
 
 - Fix `Document` type.
