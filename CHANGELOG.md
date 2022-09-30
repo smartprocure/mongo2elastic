@@ -1,3 +1,7 @@
+# 0.11.0
+
+- Latest `mongochangestream` - Option to strip metadata from a JSON schema for `detectSchemaChange`.
+
 # 0.10.0
 
 - Latest `mongochangestream` - Ensure that you can call `start` after calling `stop`.
