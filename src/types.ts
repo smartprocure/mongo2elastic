@@ -4,3 +4,5 @@ export interface SyncOptions {
   mapper?: (doc: Document) => Document
   index?: string
 }
+
+export type Events = 'process' | 'error'

@@ -8,10 +8,10 @@ import type {
 import type { Redis } from 'ioredis'
 import elasticsearch from '@elastic/elasticsearch'
 import mongoChangeStream, { ScanOptions } from 'mongochangestream'
-import { stats } from 'print-stats'
 import { QueueOptions } from 'prom-utils'
-import { SyncOptions } from './types.js'
+import { SyncOptions, Events } from './types.js'
 import { indexFromCollection } from './util.js'
+import EventEmitter from 'eventemitter3'
 
 export const initSync = (
   redis: Redis,
@@ -21,11 +21,8 @@ export const initSync = (
 ) => {
   const mapper = options.mapper || _.omit(['_id'])
   const index = options.index || indexFromCollection(collection)
-  const dbStats = stats(index)
+  const emitter = new EventEmitter<Events>()
 
-  /**
-   * Turn on ignore_malformed for the index.
-   */
   const ignoreMalformed = async () => {
     const obj = {
       index,
@@ -68,12 +65,10 @@ export const initSync = (
           id: doc.documentKey._id.toString(),
         })
       }
-      dbStats.incRows()
+      emitter.emit('process', { type: 'process', success: 1 })
     } catch (e) {
-      console.error('ERROR', e)
-      dbStats.incErrors()
+      emitter.emit('error', { type: 'error', error: e })
     }
-    dbStats.print()
   }
   /**
    * Process scan documents.
@@ -89,40 +84,43 @@ export const initSync = (
       if (response.errors) {
         const errors = response.items.filter((doc) => doc.create?.error)
         const numErrors = errors.length
-        console.error('ERRORS %d', numErrors)
-        console.dir(errors, { depth: 10 })
-        dbStats.incErrors(numErrors)
-        dbStats.incRows(docs.length - numErrors)
+        emitter.emit('process', {
+          type: 'process',
+          success: docs.length - numErrors,
+          fail: numErrors,
+        })
       } else {
-        dbStats.incRows(docs.length)
+        emitter.emit('process', { type: 'process', success: docs.length })
       }
     } catch (e) {
-      console.error('ERROR', e)
-      dbStats.incErrors()
+      emitter.emit('error', { type: 'error', error: e })
     }
-    dbStats.print()
   }
 
   const sync = mongoChangeStream.initSync(redis, collection, options)
-  /**
-   * Process MongoDB change stream for the given collection.
-   */
   const processChangeStream = (pipeline?: Document[]) =>
     sync.processChangeStream(processRecord, pipeline)
-  /**
-   * Run initial collection scan. `options.batchSize` defaults to 500.
-   * Sorting defaults to `_id`.
-   */
   const runInitialScan = (options?: QueueOptions & ScanOptions) =>
     sync.runInitialScan(processRecords, options)
 
   return {
+    /**
+     * Process MongoDB change stream for the given collection.
+     */
     processChangeStream,
+    /**
+     * Run initial collection scan. `options.batchSize` defaults to 500.
+     * Sorting defaults to `_id`.
+     */
     runInitialScan,
+    /**
+     * Turn on ignore_malformed for the index.
+     */
     ignoreMalformed,
     keys: sync.keys,
     reset: sync.reset,
     getCollectionSchema: sync.getCollectionSchema,
     detectSchemaChange: sync.detectSchemaChange,
+    emitter,
   }
 }
