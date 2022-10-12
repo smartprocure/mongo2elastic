@@ -17,6 +17,9 @@ const elastic = new elasticsearch.Client()
 const sync = initSync(new Redis(), db.collection('myCollection'), elastic, {
   omit: ['password', 'unneededStuff'],
 })
+// Log events
+sync.emitter.on('process', console.info)
+sync.emitter.on('error', console.error)
 // Create index with ignore_malformed enabled
 await sync.ignoreMalformed().catch(console.warn)
 // Process change stream events
