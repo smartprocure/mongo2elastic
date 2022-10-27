@@ -1,3 +1,7 @@
+# 0.14.0
+
+- Latest `mongochangestream` - `batchBytes` option.
+
 # 0.13.0
 
 - Return `emitter` with events: `process` and `error`.
