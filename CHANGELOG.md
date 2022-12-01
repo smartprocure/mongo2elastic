@@ -1,3 +1,7 @@
+# 0.15.0
+
+- Added `convertSchema` fn that converts a MongoDB JSON schema to an Elasticsearch mapping.
+
 # 0.14.1
 
 - Forgot to bump `prom-utils` in this repo.
