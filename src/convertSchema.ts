@@ -1,6 +1,6 @@
 import _ from 'lodash/fp.js'
 import { map, Node } from 'obj-walker'
-import { JSONSchema } from 'mongochangestream'
+import { estypes } from '@elastic/elasticsearch'
 
 const bsonTypeToElastic: Record<string, string> = {
   number: 'long',
@@ -33,7 +33,7 @@ const getElasticType = (obj: Record<string, any>) => {
   return elasticType === 'text' ? expandedTextType : elasticType
 }
 
-const convertSchemaNode = (jsonSchema: JSONSchema) => {
+const convertSchemaNode = (jsonSchema: object) => {
   const elasticType = getElasticType(jsonSchema)
   return {
     ..._.pick(['properties'], jsonSchema),
@@ -41,7 +41,7 @@ const convertSchemaNode = (jsonSchema: JSONSchema) => {
   }
 }
 
-export const convertSchema = (jsonSchema: JSONSchema) => {
+export const convertSchema = (jsonSchema: object) => {
   const mapper = (node: Node) => {
     const { key, val, parents } = node
     // Ignore top-level _id field
@@ -58,6 +58,5 @@ export const convertSchema = (jsonSchema: JSONSchema) => {
     return val
   }
   // Recursively convert the schema
-  const mappings = map(jsonSchema, mapper)
-  return { mappings }
+  return map(jsonSchema, mapper) as Record<string, estypes.MappingProperty>
 }
