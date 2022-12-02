@@ -92,9 +92,6 @@ describe('convertSchema', () => {
               priceId: {
                 bsonType: 'string',
               },
-              subscriptionStatus: {
-                bsonType: 'string',
-              },
             },
           },
         },
@@ -182,24 +179,7 @@ describe('convertSchema', () => {
           type: 'text',
           fields: { keyword: { type: 'keyword', ignore_above: 256 } },
         },
-        integrations: {
-          properties: {
-            stripe: {
-              properties: {
-                priceId: {
-                  type: 'text',
-                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
-                },
-                subscriptionStatus: {
-                  type: 'text',
-                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
-                },
-              },
-              type: 'flattened',
-            },
-          },
-          type: 'flattened',
-        },
+        integrations: { type: 'flattened' },
         createdAt: { type: 'date' },
         permissions: {
           type: 'text',
