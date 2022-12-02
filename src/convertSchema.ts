@@ -27,17 +27,17 @@ const expandedTextType = {
 
 const getElasticType = (obj: Record<string, any>) => {
   if (obj.bsonType === 'object' && obj?.additionalProperties !== false) {
-    return 'flattened'
+    return { type: 'flattened' }
   }
   const elasticType = bsonTypeToElastic[obj.bsonType]
-  return elasticType === 'text' ? expandedTextType : elasticType
+  return elasticType === 'text' ? expandedTextType : { type: elasticType }
 }
 
 const convertSchemaNode = (jsonSchema: object) => {
   const elasticType = getElasticType(jsonSchema)
   return {
     ..._.pick(['properties'], jsonSchema),
-    ...(elasticType && { type: elasticType }),
+    ...elasticType,
   }
 }
 

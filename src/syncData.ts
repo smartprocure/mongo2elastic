@@ -42,10 +42,7 @@ export const initSync = (
 
   const createMappingFromSchema = async (jsonSchema: object) => {
     const mappings = convertSchema(jsonSchema)
-    return elastic.indices.putMapping({
-      index,
-      properties: mappings,
-    })
+    return elastic.indices.putMapping({ index, ...mappings })
   }
   /**
    * Process a change stream event.
