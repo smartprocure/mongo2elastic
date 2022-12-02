@@ -22,6 +22,11 @@ sync.emitter.on('process', console.info)
 sync.emitter.on('error', console.error)
 // Create index with ignore_malformed enabled
 await sync.ignoreMalformed().catch(console.warn)
+// Create mapping
+const schema = await sync.getCollectionSchema(db)
+if (schema) {
+  await sync.createMappingFromSchema(schema)
+}
 // Process change stream events
 const changeStream = await sync.processChangeStream()
 changeStream.start()
