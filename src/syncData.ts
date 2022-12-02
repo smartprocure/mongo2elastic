@@ -40,7 +40,7 @@ export const initSync = (
     await elastic.indices.create(obj)
   }
 
-  const createIndexFromSchema = async (jsonSchema: object) => {
+  const createMappingFromSchema = async (jsonSchema: object) => {
     const mappings = convertSchema(jsonSchema)
     return elastic.indices.putMapping({
       index,
@@ -127,9 +127,9 @@ export const initSync = (
      */
     ignoreMalformed,
     /**
-     * Create index mapping from MongoDB JSON schema
+     * Create mapping from MongoDB JSON schema
      */
-    createIndexFromSchema,
+    createMappingFromSchema,
     keys: sync.keys,
     reset: sync.reset,
     getCollectionSchema: sync.getCollectionSchema,
