@@ -1,8 +1,6 @@
 import _ from 'lodash/fp.js'
-import { set } from 'lodash'
-import { map, Node, walkie } from 'obj-walker'
+import { map, Node } from 'obj-walker'
 import { JSONSchema } from 'mongochangestream'
-import { ConvertOptions, Override } from './types.js'
 
 const bsonTypeToElastic: Record<string, string> = {
   number: 'long',
@@ -43,10 +41,7 @@ const convertSchemaNode = (jsonSchema: JSONSchema) => {
   }
 }
 
-export const convertSchema = (
-  jsonSchema: JSONSchema,
-  options: ConvertOptions = {}
-) => {
+export const convertSchema = (jsonSchema: JSONSchema) => {
   const mapper = (node: Node) => {
     const { key, val, parents } = node
     // Ignore top-level _id field
@@ -64,19 +59,5 @@ export const convertSchema = (
   }
   // Recursively convert the schema
   const mappings = map(jsonSchema, mapper)
-
-  if (options.overrides) {
-    const overrides = options.overrides
-    const walkFn = (node: Node) => {
-      const overrideMatch = overrides.find(({ path }) =>
-        _.isEqual(node.path, _.toPath(path))
-      )
-      if (overrideMatch) {
-        set(node.val, 'type', bsonTypeToElastic[overrideMatch.bsonType])
-      }
-    }
-    const obj = walkie(mappings, walkFn, { traverse: (x) => x?.properties })
-    return { mappings: obj }
-  }
   return { mappings }
 }
