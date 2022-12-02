@@ -92,9 +92,6 @@ describe('convertSchema', () => {
               priceId: {
                 bsonType: 'string',
               },
-              subscriptionStatus: {
-                bsonType: 'string',
-              },
             },
           },
         },
@@ -112,154 +109,81 @@ describe('convertSchema', () => {
   }
   test('Convert MongoDB schema to Elastic', () => {
     expect(convertSchema(schema)).toEqual({
-      mappings: {
-        properties: {
-          parentId: { type: 'keyword' },
-          name: {
-            type: {
-              type: 'text',
-              fields: { keyword: { type: 'keyword', ignore_above: 256 } },
-            },
-          },
-          subType: {
-            type: {
-              type: 'text',
-              fields: { keyword: { type: 'keyword', ignore_above: 256 } },
-            },
-          },
-          numberOfEmployees: {
-            type: {
-              type: 'text',
-              fields: { keyword: { type: 'keyword', ignore_above: 256 } },
-            },
-          },
-          addresses: {
-            properties: {
-              address: {
-                properties: {
-                  address1: {
-                    type: {
-                      type: 'text',
-                      fields: {
-                        keyword: { type: 'keyword', ignore_above: 256 },
-                      },
-                    },
-                  },
-                  address2: {
-                    type: {
-                      type: 'text',
-                      fields: {
-                        keyword: { type: 'keyword', ignore_above: 256 },
-                      },
-                    },
-                  },
-                  city: {
-                    type: {
-                      type: 'text',
-                      fields: {
-                        keyword: { type: 'keyword', ignore_above: 256 },
-                      },
-                    },
-                  },
-                  county: {
-                    type: {
-                      type: 'text',
-                      fields: {
-                        keyword: { type: 'keyword', ignore_above: 256 },
-                      },
-                    },
-                  },
-                  state: {
-                    type: {
-                      type: 'text',
-                      fields: {
-                        keyword: { type: 'keyword', ignore_above: 256 },
-                      },
-                    },
-                  },
-                  zip: {
-                    type: {
-                      type: 'text',
-                      fields: {
-                        keyword: { type: 'keyword', ignore_above: 256 },
-                      },
-                    },
-                  },
-                  country: {
-                    type: {
-                      type: 'text',
-                      fields: {
-                        keyword: { type: 'keyword', ignore_above: 256 },
-                      },
-                    },
-                  },
-                  latitude: { type: 'long' },
-                  longitude: { type: 'long' },
-                  timezone: {
-                    type: {
-                      type: 'text',
-                      fields: {
-                        keyword: { type: 'keyword', ignore_above: 256 },
-                      },
-                    },
-                  },
+      properties: {
+        parentId: { type: 'keyword' },
+        name: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+        },
+        subType: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+        },
+        numberOfEmployees: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+        },
+        addresses: {
+          properties: {
+            address: {
+              properties: {
+                address1: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
                 },
-              },
-              name: {
-                type: {
+                address2: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                },
+                city: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                },
+                county: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                },
+                state: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                },
+                zip: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                },
+                country: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                },
+                latitude: { type: 'long' },
+                longitude: { type: 'long' },
+                timezone: {
                   type: 'text',
                   fields: { keyword: { type: 'keyword', ignore_above: 256 } },
                 },
               },
-              isPrimary: { type: 'boolean' },
             },
-          },
-          logo: {
-            type: {
+            name: {
               type: 'text',
               fields: { keyword: { type: 'keyword', ignore_above: 256 } },
             },
+            isPrimary: { type: 'boolean' },
           },
-          verified: { type: 'boolean' },
-          partner: {
-            type: {
-              type: 'text',
-              fields: { keyword: { type: 'keyword', ignore_above: 256 } },
-            },
-          },
-          integrations: {
-            properties: {
-              stripe: {
-                properties: {
-                  priceId: {
-                    type: {
-                      type: 'text',
-                      fields: {
-                        keyword: { type: 'keyword', ignore_above: 256 },
-                      },
-                    },
-                  },
-                  subscriptionStatus: {
-                    type: {
-                      type: 'text',
-                      fields: {
-                        keyword: { type: 'keyword', ignore_above: 256 },
-                      },
-                    },
-                  },
-                },
-                type: 'flattened',
-              },
-            },
-            type: 'flattened',
-          },
-          createdAt: { type: 'date' },
-          permissions: {
-            type: {
-              type: 'text',
-              fields: { keyword: { type: 'keyword', ignore_above: 256 } },
-            },
-          },
+        },
+        logo: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+        },
+        verified: { type: 'boolean' },
+        partner: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+        },
+        integrations: { type: 'flattened' },
+        createdAt: { type: 'date' },
+        permissions: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
         },
       },
     })

@@ -11,6 +11,7 @@ import mongoChangeStream, { ScanOptions } from 'mongochangestream'
 import { QueueOptions } from 'prom-utils'
 import { SyncOptions, Events } from './types.js'
 import { indexFromCollection } from './util.js'
+import { convertSchema } from './convertSchema.js'
 import EventEmitter from 'eventemitter3'
 
 export const initSync = (
@@ -37,6 +38,11 @@ export const initSync = (
       },
     }
     await elastic.indices.create(obj)
+  }
+
+  const createMappingFromSchema = async (jsonSchema: object) => {
+    const mappings = convertSchema(jsonSchema)
+    return elastic.indices.putMapping({ index, ...mappings })
   }
   /**
    * Process a change stream event.
@@ -117,6 +123,10 @@ export const initSync = (
      * Turn on ignore_malformed for the index.
      */
     ignoreMalformed,
+    /**
+     * Create mapping from MongoDB JSON schema
+     */
+    createMappingFromSchema,
     keys: sync.keys,
     reset: sync.reset,
     getCollectionSchema: sync.getCollectionSchema,

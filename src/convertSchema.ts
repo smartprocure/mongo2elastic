@@ -1,6 +1,6 @@
 import _ from 'lodash/fp.js'
 import { map, Node } from 'obj-walker'
-import { JSONSchema } from 'mongochangestream'
+import { estypes } from '@elastic/elasticsearch'
 
 const bsonTypeToElastic: Record<string, string> = {
   number: 'long',
@@ -25,23 +25,23 @@ const expandedTextType = {
   },
 }
 
-const getElasticType = (obj: Record<string, any>) => {
-  if (obj.bsonType === 'object' && obj?.additionalProperties !== false) {
-    return 'flattened'
+const convertSchemaNode = (obj: Record<string, any>) => {
+  if (obj.bsonType === 'object') {
+    if (obj?.additionalProperties !== false) {
+      return { type: 'flattened' }
+    }
+    return _.pick(['properties'], obj)
   }
   const elasticType = bsonTypeToElastic[obj.bsonType]
-  return elasticType === 'text' ? expandedTextType : elasticType
-}
-
-const convertSchemaNode = (jsonSchema: JSONSchema) => {
-  const elasticType = getElasticType(jsonSchema)
-  return {
-    ..._.pick(['properties'], jsonSchema),
-    ...(elasticType && { type: elasticType }),
+  if (elasticType === 'text') {
+    return expandedTextType
+  }
+  if (elasticType) {
+    return { type: elasticType }
   }
 }
 
-export const convertSchema = (jsonSchema: JSONSchema) => {
+export const convertSchema = (jsonSchema: object) => {
   const mapper = (node: Node) => {
     const { key, val, parents } = node
     // Ignore top-level _id field
@@ -58,6 +58,5 @@ export const convertSchema = (jsonSchema: JSONSchema) => {
     return val
   }
   // Recursively convert the schema
-  const mappings = map(jsonSchema, mapper)
-  return { mappings }
+  return map(jsonSchema, mapper) as Record<string, estypes.MappingProperty>
 }
