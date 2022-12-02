@@ -9,6 +9,9 @@ describe('convertSchema', () => {
       _id: {
         bsonType: 'objectId',
       },
+      parentId: {
+        bsonType: 'objectId',
+      },
       name: {
         bsonType: 'string',
       },
@@ -111,6 +114,7 @@ describe('convertSchema', () => {
     expect(convertSchema(schema)).toEqual({
       mappings: {
         properties: {
+          parentId: { type: 'keyword' },
           name: {
             type: {
               type: 'text',
