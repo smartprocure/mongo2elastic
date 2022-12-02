@@ -6,3 +6,12 @@ export interface SyncOptions {
 }
 
 export type Events = 'process' | 'error'
+
+export interface Override {
+  path: string
+  bsonType: string
+}
+
+export interface ConvertOptions {
+  overrides?: Override[]
+}

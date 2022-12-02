@@ -54,7 +54,7 @@
     "eventemitter3": "^4.0.7",
     "lodash": "^4.17.21",
     "mongochangestream": "^0.25.0",
-    "obj-walker": "^1.1.0",
+    "obj-walker": "^1.1.1",
     "p-retry": "^5.1.1",
     "prom-utils": "^0.4.0"
   },
