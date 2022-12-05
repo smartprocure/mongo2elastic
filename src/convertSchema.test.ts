@@ -10,7 +10,7 @@ describe('convertSchema', () => {
         bsonType: 'objectId',
       },
       parentId: {
-        bsonType: 'objectId',
+        bsonType: ['objectId', 'null'],
       },
       name: {
         bsonType: 'string',

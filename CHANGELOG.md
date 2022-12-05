@@ -1,3 +1,7 @@
+# 0.17.1
+
+- Unwrap first value of multi-valued BSON type. E.g., `['string', 'null']` => `'string'`.
+
 # 0.17.0
 
 - Added options for `omit` and `overrides` to `convertSchema`.

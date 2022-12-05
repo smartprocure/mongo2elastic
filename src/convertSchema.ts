@@ -75,6 +75,10 @@ export const convertSchema = (
       if (key === '_id' && parents.length === 2) {
         return
       }
+      // Use the first type if multi-valued
+      if (Array.isArray(val.bsonType)) {
+        val.bsonType = val.bsonType[0]
+      }
       // Optionally override bsonType
       const override = overrides.find(({ path }) => _.isEqual(cleanPath, path))
       if (override) {
