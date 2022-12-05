@@ -5,4 +5,14 @@ export interface SyncOptions {
   index?: string
 }
 
+export interface Override {
+  path: string
+  bsonType: string
+}
+
+export interface ConvertOptions {
+  omit?: string[]
+  overrides?: Override[]
+}
+
 export type Events = 'process' | 'error'

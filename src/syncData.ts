@@ -9,7 +9,7 @@ import type { Redis } from 'ioredis'
 import elasticsearch from '@elastic/elasticsearch'
 import mongoChangeStream, { ScanOptions } from 'mongochangestream'
 import { QueueOptions } from 'prom-utils'
-import { SyncOptions, Events } from './types.js'
+import { SyncOptions, Events, ConvertOptions } from './types.js'
 import { indexFromCollection } from './util.js'
 import { convertSchema } from './convertSchema.js'
 import EventEmitter from 'eventemitter3'
@@ -40,8 +40,11 @@ export const initSync = (
     await elastic.indices.create(obj)
   }
 
-  const createMappingFromSchema = async (jsonSchema: object) => {
-    const mappings = convertSchema(jsonSchema)
+  const createMappingFromSchema = async (
+    jsonSchema: object,
+    options: ConvertOptions = {}
+  ) => {
+    const mappings = convertSchema(jsonSchema, options)
     return elastic.indices.putMapping({ index, ...mappings })
   }
   /**

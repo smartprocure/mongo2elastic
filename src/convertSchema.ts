@@ -1,6 +1,7 @@
 import _ from 'lodash/fp.js'
 import { map, Node } from 'obj-walker'
 import { estypes } from '@elastic/elasticsearch'
+import { ConvertOptions } from './types.js'
 
 const bsonTypeToElastic: Record<string, string> = {
   number: 'long',
@@ -32,6 +33,10 @@ const convertSchemaNode = (obj: Record<string, any>) => {
     }
     return _.pick(['properties'], obj)
   }
+  // String enum -> keyword
+  if (obj.bsonType === 'string' && obj.enum) {
+    return { type: 'keyword' }
+  }
   const elasticType = bsonTypeToElastic[obj.bsonType]
   if (elasticType === 'text') {
     return expandedTextType
@@ -41,16 +46,42 @@ const convertSchemaNode = (obj: Record<string, any>) => {
   }
 }
 
-export const convertSchema = (jsonSchema: object) => {
+const cleanupPath = _.pullAll(['properties', 'items'])
+
+/**
+ * Convert MongoDB JSON schema to Elasticsearch mapping.
+ * Optionally, omit fields and change the BSON type for fields.
+ * The latter is useful where a more-specific numeric type is needed.
+ */
+export const convertSchema = (
+  jsonSchema: object,
+  options: ConvertOptions = {}
+) => {
+  // Handle options
+  const omit = options.omit ? options.omit.map(_.toPath) : []
+  const overrides = options.overrides
+    ? options.overrides.map((x) => ({ ...x, path: _.toPath(x.path) }))
+    : []
+
   const mapper = (node: Node) => {
-    const { key, val, parents } = node
-    // Ignore top-level _id field
-    if (key === '_id' && parents.length === 2) {
-      return
-    }
+    const { key, val, parents, path } = node
     if (val?.bsonType) {
-      // Unwrap arrays since ES doesn't support explicit array fields
+      const cleanPath = cleanupPath(path)
+      // Optionally omit field
+      if (omit.find(_.isEqual(cleanPath))) {
+        return
+      }
+      // Ignore top-level _id field
+      if (key === '_id' && parents.length === 2) {
+        return
+      }
+      // Optionally override bsonType
+      const override = overrides.find(({ path }) => _.isEqual(cleanPath, path))
+      if (override) {
+        val.bsonType = override.bsonType
+      }
       if (val.bsonType === 'array') {
+        // Unwrap arrays since ES doesn't support explicit array fields
         return convertSchemaNode(val.items)
       }
       return convertSchemaNode(val)

@@ -1,3 +1,13 @@
+# 0.17.0
+
+- Added options for `omit` and `overrides` to `convertSchema`.
+- Convert string enum to keyword.
+
+# 0.16.0
+
+- Added `createMappingFromSchema`.
+- `convertSchema` bug fixes.
+
 # 0.15.0
 
 - Added `convertSchema` fn that converts a MongoDB JSON schema to an Elasticsearch mapping.
