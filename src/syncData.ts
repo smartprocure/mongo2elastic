@@ -24,7 +24,7 @@ export const initSync = (
   const index = options.index || indexFromCollection(collection)
   const emitter = new EventEmitter<Events>()
 
-  const ignoreMalformed = async () => {
+  const ignoreMalformed = async (settings: object = {}) => {
     const obj = {
       index,
       body: {
@@ -34,6 +34,7 @@ export const initSync = (
               ignore_malformed: true,
             },
           },
+          ...settings
         },
       },
     }

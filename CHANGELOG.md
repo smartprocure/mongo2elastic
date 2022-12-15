@@ -1,3 +1,7 @@
+# 0.18.0
+
+- Add optional settings that can be added to `ignoreMalformed`.
+
 # 0.17.1
 
 - Unwrap first value of multi-valued BSON type. E.g., `['string', 'null']` => `'string'`.
