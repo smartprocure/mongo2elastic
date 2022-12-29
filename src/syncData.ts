@@ -29,12 +29,8 @@ export const initSync = (
       index,
       body: {
         settings: {
-          index: {
-            mapping: {
-              ignore_malformed: true,
-            },
-          },
-          ...settings
+          'index.mapping.ignore_malformed': true,
+          ...settings,
         },
       },
     }

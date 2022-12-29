@@ -1,3 +1,7 @@
+# 0.19.0
+
+- Use flattened key path for ignore_malformed.
+
 # 0.18.0
 
 - Add optional settings that can be added to `ignoreMalformed`.
