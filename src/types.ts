@@ -13,6 +13,7 @@ export interface Override {
 export interface ConvertOptions {
   omit?: string[]
   overrides?: Override[]
+  passthrough?: string[]
 }
 
 export type Events = 'process' | 'error'

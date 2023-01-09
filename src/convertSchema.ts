@@ -16,33 +16,39 @@ const bsonTypeToElastic: Record<string, string> = {
   bool: 'boolean',
 }
 
-const expandedTextType = {
-  type: 'text',
-  fields: {
-    keyword: {
-      type: 'keyword',
-      ignore_above: 256,
-    },
-  },
-}
-
-const convertSchemaNode = (obj: Record<string, any>) => {
+const convertSchemaNode = (
+  obj: Record<string, any>,
+  options: ConvertOptions
+) => {
+  const field = options.passthrough ? _.pick(options.passthrough, obj) : {}
   if (obj.bsonType === 'object') {
+    // Use flattened type since object can have arbitrary keys
     if (obj?.additionalProperties !== false) {
-      return { type: 'flattened' }
+      return { type: 'flattened', ...field }
     }
     return _.pick(['properties'], obj)
   }
   // String enum -> keyword
   if (obj.bsonType === 'string' && obj.enum) {
-    return { type: 'keyword' }
+    return { type: 'keyword', ...field }
   }
+
   const elasticType = bsonTypeToElastic[obj.bsonType]
+  // Add keyword sub-field to text type automatically
   if (elasticType === 'text') {
-    return expandedTextType
+    return {
+      type: 'text',
+      fields: {
+        keyword: {
+          type: 'keyword',
+          ignore_above: 256,
+        },
+      },
+      ...field,
+    }
   }
   if (elasticType) {
-    return { type: elasticType }
+    return { type: elasticType, ...field }
   }
 }
 
@@ -86,9 +92,9 @@ export const convertSchema = (
       }
       if (val.bsonType === 'array') {
         // Unwrap arrays since ES doesn't support explicit array fields
-        return convertSchemaNode(val.items)
+        return convertSchemaNode(val.items, options)
       }
-      return convertSchemaNode(val)
+      return convertSchemaNode(val, options)
     }
     return val
   }

@@ -34,24 +34,31 @@ describe('convertSchema', () => {
               properties: {
                 address1: {
                   bsonType: 'string',
+                  copy_to: 'full_address',
                 },
                 address2: {
                   bsonType: 'string',
+                  copy_to: 'full_address',
                 },
                 city: {
                   bsonType: 'string',
+                  copy_to: 'full_address',
                 },
                 county: {
                   bsonType: 'string',
+                  copy_to: 'full_address',
                 },
                 state: {
                   bsonType: 'string',
+                  copy_to: 'full_address',
                 },
                 zip: {
                   bsonType: 'string',
+                  copy_to: 'full_address',
                 },
                 country: {
                   bsonType: 'string',
+                  copy_to: 'full_address',
                 },
                 latitude: {
                   bsonType: 'number',
@@ -195,6 +202,7 @@ describe('convertSchema', () => {
         { path: 'addresses.address.latitude', bsonType: 'double' },
         { path: 'addresses.address.longitude', bsonType: 'double' },
       ],
+      passthrough: ['copy_to'],
     }
     expect(convertSchema(schema, options)).toEqual({
       properties: {
@@ -217,30 +225,37 @@ describe('convertSchema', () => {
                 address1: {
                   type: 'text',
                   fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: 'full_address',
                 },
                 address2: {
                   type: 'text',
                   fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: 'full_address',
                 },
                 city: {
                   type: 'text',
                   fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: 'full_address',
                 },
                 county: {
                   type: 'text',
                   fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: 'full_address',
                 },
                 state: {
                   type: 'text',
                   fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: 'full_address',
                 },
                 zip: {
                   type: 'text',
                   fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: 'full_address',
                 },
                 country: {
                   type: 'text',
                   fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: 'full_address',
                 },
                 latitude: { type: 'double' },
                 longitude: { type: 'double' },

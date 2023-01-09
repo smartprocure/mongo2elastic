@@ -1,6 +1,11 @@
+# 0.20.0
+
+- Added `passthrough` option to allow for customization of field mappings.
+- Use `_.merge` instead of flattened key path.
+
 # 0.19.0
 
-- Use flattened key path for ignore_malformed.
+- Use flattened key path for `ignore_malformed`.
 
 # 0.18.0
 

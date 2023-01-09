@@ -28,10 +28,16 @@ export const initSync = (
     const obj = {
       index,
       body: {
-        settings: {
-          'index.mapping.ignore_malformed': true,
-          ...settings,
-        },
+        settings: _.merge(
+          {
+            index: {
+              mapping: {
+                ignore_malformed: true,
+              },
+            },
+          },
+          settings
+        ),
       },
     }
     await elastic.indices.create(obj)
