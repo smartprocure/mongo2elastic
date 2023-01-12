@@ -3,11 +3,10 @@ import type {
   ChangeStreamDocument,
   ChangeStreamInsertDocument,
   Collection,
-  Document,
 } from 'mongodb'
 import type { Redis } from 'ioredis'
 import elasticsearch from '@elastic/elasticsearch'
-import mongoChangeStream, { ScanOptions } from 'mongochangestream'
+import mongoChangeStream, { ScanOptions, ChangeStreamOptions } from 'mongochangestream'
 import { QueueOptions } from 'prom-utils'
 import { SyncOptions, Events, ConvertOptions } from './types.js'
 import { indexFromCollection } from './util.js'
@@ -110,8 +109,8 @@ export const initSync = (
   }
 
   const sync = mongoChangeStream.initSync(redis, collection, options)
-  const processChangeStream = (pipeline?: Document[]) =>
-    sync.processChangeStream(processRecord, pipeline)
+  const processChangeStream = (options?: ChangeStreamOptions) =>
+    sync.processChangeStream(processRecord, options)
   const runInitialScan = (options?: QueueOptions & ScanOptions) =>
     sync.runInitialScan(processRecords, options)
 

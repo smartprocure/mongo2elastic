@@ -1,3 +1,7 @@
+# 0.21.0
+
+- Latest `mongochangestream` - health checks.
+
 # 0.20.0
 
 - Added `passthrough` option to allow for customization of field mappings.
