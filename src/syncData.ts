@@ -6,12 +6,14 @@ import type {
 } from 'mongodb'
 import type { Redis } from 'ioredis'
 import elasticsearch from '@elastic/elasticsearch'
-import mongoChangeStream, { ScanOptions, ChangeStreamOptions } from 'mongochangestream'
+import mongoChangeStream, {
+  ScanOptions,
+  ChangeStreamOptions,
+} from 'mongochangestream'
 import { QueueOptions } from 'prom-utils'
 import { SyncOptions, Events, ConvertOptions } from './types.js'
 import { indexFromCollection } from './util.js'
 import { convertSchema } from './convertSchema.js'
-import EventEmitter from 'eventemitter3'
 
 export const initSync = (
   redis: Redis,
@@ -21,7 +23,13 @@ export const initSync = (
 ) => {
   const mapper = options.mapper || _.omit(['_id'])
   const index = options.index || indexFromCollection(collection)
-  const emitter = new EventEmitter<Events>()
+  // Initialize sync
+  const sync = mongoChangeStream.initSync(redis, collection, options)
+  // Use emitter from mongochangestream
+  const emitter = sync.emitter
+  const emit = (event: Events, data: object) => {
+    emitter.emit(event, { type: event, ...data })
+  }
 
   const ignoreMalformed = async (settings: object = {}) => {
     const obj = {
@@ -76,9 +84,9 @@ export const initSync = (
           id: doc.documentKey._id.toString(),
         })
       }
-      emitter.emit('process', { type: 'process', success: 1 })
+      emit('process', { success: 1 })
     } catch (e) {
-      emitter.emit('error', { type: 'error', error: e })
+      emit('error', { error: e })
     }
   }
   /**
@@ -95,20 +103,18 @@ export const initSync = (
       if (response.errors) {
         const errors = response.items.filter((doc) => doc.create?.error)
         const numErrors = errors.length
-        emitter.emit('process', {
-          type: 'process',
+        emit('process', {
           success: docs.length - numErrors,
           fail: numErrors,
         })
       } else {
-        emitter.emit('process', { type: 'process', success: docs.length })
+        emit('process', { success: docs.length })
       }
     } catch (e) {
-      emitter.emit('error', { type: 'error', error: e })
+      emit('error', { error: e })
     }
   }
 
-  const sync = mongoChangeStream.initSync(redis, collection, options)
   const processChangeStream = (options?: ChangeStreamOptions) =>
     sync.processChangeStream(processRecord, options)
   const runInitialScan = (options?: QueueOptions & ScanOptions) =>
