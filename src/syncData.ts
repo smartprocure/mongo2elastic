@@ -121,6 +121,7 @@ export const initSync = (
     sync.runInitialScan(processRecords, options)
 
   return {
+    ...sync,
     /**
      * Process MongoDB change stream for the given collection.
      */
@@ -138,10 +139,6 @@ export const initSync = (
      * Create mapping from MongoDB JSON schema
      */
     createMappingFromSchema,
-    keys: sync.keys,
-    reset: sync.reset,
-    getCollectionSchema: sync.getCollectionSchema,
-    detectSchemaChange: sync.detectSchemaChange,
     emitter,
   }
 }

@@ -1,3 +1,7 @@
+# 0.24.1
+
+- Export `detectResync`.
+
 # 0.24.0
 
 - Latest `mongochangestream` - More robust cursor consumption.
