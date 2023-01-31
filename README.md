@@ -21,7 +21,7 @@ const sync = initSync(new Redis(), db.collection('myCollection'), elastic, {
 sync.emitter.on('process', console.info)
 sync.emitter.on('error', console.error)
 // Create index with ignore_malformed enabled
-await sync.ignoreMalformed().catch(console.warn)
+await sync.createIndexIgnoreMalformed().catch(console.warn)
 // Create mapping
 const schema = await sync.getCollectionSchema(db)
 if (schema) {

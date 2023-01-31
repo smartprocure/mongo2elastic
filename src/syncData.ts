@@ -31,7 +31,7 @@ export const initSync = (
     emitter.emit(event, { type: event, ...data })
   }
 
-  const ignoreMalformed = async (settings: object = {}) => {
+  const createIndexIgnoreMalformed = async (settings: object = {}) => {
     const obj = {
       index,
       body: {
@@ -84,13 +84,13 @@ export const initSync = (
           id: doc.documentKey._id.toString(),
         })
       }
-      emit('process', { success: 1 })
+      emit('process', { success: 1, changeStream: true })
     } catch (e) {
-      emit('error', { error: e })
+      emit('error', { error: e, changeStream: true })
     }
   }
   /**
-   * Process scan documents.
+   * Process initial scan documents.
    */
   const processRecords = async (docs: ChangeStreamInsertDocument[]) => {
     try {
@@ -106,12 +106,13 @@ export const initSync = (
         emit('process', {
           success: docs.length - numErrors,
           fail: numErrors,
+          initialScan: true,
         })
       } else {
-        emit('process', { success: docs.length })
+        emit('process', { success: docs.length, initialScan: true })
       }
     } catch (e) {
-      emit('error', { error: e })
+      emit('error', { error: e, initialScan: true })
     }
   }
 
@@ -132,9 +133,9 @@ export const initSync = (
      */
     runInitialScan,
     /**
-     * Turn on ignore_malformed for the index.
+     * Create index with ignore_malformed enabled for the index.
      */
-    ignoreMalformed,
+    createIndexIgnoreMalformed,
     /**
      * Create mapping from MongoDB JSON schema
      */

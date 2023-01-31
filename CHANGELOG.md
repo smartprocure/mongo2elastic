@@ -1,3 +1,8 @@
+# 0.25.0
+
+- Renamed `ignoreMalformed` to `createIndexIgnoreMalformed`.
+- More info when emitting.
+
 # 0.24.1
 
 - Export `detectResync`.
