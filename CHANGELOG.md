@@ -1,3 +1,7 @@
+# 0.26.0
+
+- Latest `mongochangestream` - Longer `maxSyncDelay` default.
+
 # 0.25.0
 
 - Renamed `ignoreMalformed` to `createIndexIgnoreMalformed`.
