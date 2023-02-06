@@ -1,3 +1,7 @@
+# 0.27.0
+
+- Latest `mongochangestream` - Handle master failover scenario properly for initial scan.
+
 # 0.26.0
 
 - Latest `mongochangestream` - Longer `maxSyncDelay` default.
