@@ -198,10 +198,7 @@ describe('convertSchema', () => {
   test('Convert MongoDB schema to Elastic with options', () => {
     const options = {
       omit: ['integrations', 'permissions'],
-      overrides: [
-        { path: 'addresses.address.latitude', bsonType: 'double' },
-        { path: 'addresses.address.longitude', bsonType: 'double' },
-      ],
+      overrides: [{ path: 'addresses.address.l*', bsonType: 'double' }],
       passthrough: ['copy_to'],
     }
     expect(convertSchema(schema, options)).toEqual({
@@ -282,6 +279,98 @@ describe('convertSchema', () => {
           fields: { keyword: { type: 'keyword', ignore_above: 256 } },
         },
         createdAt: { type: 'date' },
+      },
+    })
+  })
+  test('Convert MongoDB schema to Elastic with unified field', () => {
+    const options = {
+      omit: ['integrations', 'permissions'],
+      overrides: [{ path: '*', copy_to: 'all' }],
+      passthrough: ['copy_to'],
+    }
+    const result = convertSchema(schema, options)
+    expect(result).toEqual({
+      properties: {
+        parentId: { type: 'keyword', copy_to: 'all' },
+        name: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          copy_to: 'all',
+        },
+        subType: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          copy_to: 'all',
+        },
+        numberOfEmployees: { type: 'keyword', copy_to: 'all' },
+        addresses: {
+          properties: {
+            address: {
+              properties: {
+                address1: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: 'all',
+                },
+                address2: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: 'all',
+                },
+                city: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: 'all',
+                },
+                county: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: 'all',
+                },
+                state: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: 'all',
+                },
+                zip: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: 'all',
+                },
+                country: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: 'all',
+                },
+                latitude: { type: 'long', copy_to: 'all' },
+                longitude: { type: 'long', copy_to: 'all' },
+                timezone: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: 'all',
+                },
+              },
+            },
+            name: {
+              type: 'text',
+              fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+              copy_to: 'all',
+            },
+            isPrimary: { type: 'boolean', copy_to: 'all' },
+          },
+        },
+        logo: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          copy_to: 'all',
+        },
+        verified: { type: 'boolean', copy_to: 'all' },
+        partner: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          copy_to: 'all',
+        },
+        createdAt: { type: 'date', copy_to: 'all' },
       },
     })
   })

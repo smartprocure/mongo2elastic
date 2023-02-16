@@ -2,6 +2,7 @@ import _ from 'lodash/fp.js'
 import { map, Node } from 'obj-walker'
 import { estypes } from '@elastic/elasticsearch'
 import { ConvertOptions } from './types.js'
+import { minimatch } from 'minimatch'
 
 const bsonTypeToElastic: Record<string, string> = {
   number: 'long',
@@ -65,12 +66,11 @@ export const convertSchema = (
 ) => {
   // Handle options
   const omit = options.omit ? options.omit.map(_.toPath) : []
-  const overrides = options.overrides
-    ? options.overrides.map((x) => ({ ...x, path: _.toPath(x.path) }))
-    : []
+  const overrides = options.overrides || []
 
   const mapper = (node: Node) => {
-    const { key, val, parents, path } = node
+    const { key, parents, path } = node
+    let { val } = node
     if (val?.bsonType) {
       const cleanPath = cleanupPath(path)
       // Optionally omit field
@@ -86,10 +86,13 @@ export const convertSchema = (
         val.bsonType = val.bsonType[0]
       }
       // Optionally override bsonType
-      const override = overrides.find(({ path }) => _.isEqual(cleanPath, path))
-      if (override) {
-        val.bsonType = override.bsonType
+      const overrideMatch = overrides.find(({ path }) =>
+        minimatch(cleanPath.join('.'), path)
+      )
+      if (overrideMatch) {
+        val = { ...val, ...overrideMatch }
       }
+      // Handles arrays
       if (val.bsonType === 'array') {
         // Unwrap arrays since ES doesn't support explicit array fields
         return convertSchemaNode(val.items, options)

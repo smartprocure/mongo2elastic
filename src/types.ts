@@ -5,9 +5,8 @@ export interface SyncOptions {
   index?: string
 }
 
-export interface Override {
+export interface Override extends Record<string, any> {
   path: string
-  bsonType: string
 }
 
 export interface ConvertOptions {
