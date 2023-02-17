@@ -3,6 +3,7 @@ import { map, Node } from 'obj-walker'
 import { estypes } from '@elastic/elasticsearch'
 import { ConvertOptions } from './types.js'
 import { minimatch } from 'minimatch'
+import { JSONSchema } from 'mongochangestream'
 
 const bsonTypeToElastic: Record<string, string> = {
   number: 'long',
@@ -17,10 +18,7 @@ const bsonTypeToElastic: Record<string, string> = {
   bool: 'boolean',
 }
 
-const convertSchemaNode = (
-  obj: Record<string, any>,
-  options: ConvertOptions
-) => {
+const convertSchemaNode = (obj: JSONSchema, options: ConvertOptions) => {
   const field = options.passthrough ? _.pick(options.passthrough, obj) : {}
   if (obj.bsonType === 'object') {
     // Use flattened type since object can have arbitrary keys
@@ -61,7 +59,7 @@ const cleanupPath = _.pullAll(['properties', 'items'])
  * The latter is useful where a more-specific numeric type is needed.
  */
 export const convertSchema = (
-  jsonSchema: object,
+  jsonSchema: JSONSchema,
   options: ConvertOptions = {}
 ) => {
   // Handle options
@@ -73,6 +71,7 @@ export const convertSchema = (
     let { val } = node
     if (val?.bsonType) {
       const cleanPath = cleanupPath(path)
+      const stringPath = cleanPath.join('.')
       // Optionally omit field
       if (omit.find(_.isEqual(cleanPath))) {
         return
@@ -85,12 +84,13 @@ export const convertSchema = (
       if (Array.isArray(val.bsonType)) {
         val.bsonType = val.bsonType[0]
       }
-      // Optionally override bsonType
+      // Optionally override field
       const overrideMatch = overrides.find(({ path }) =>
-        minimatch(cleanPath.join('.'), path)
+        minimatch(stringPath, path)
       )
       if (overrideMatch) {
-        val = { ...val, ...overrideMatch }
+        const mapper = overrideMatch.mapper
+        val = { ...(mapper ? mapper(val, stringPath) : val), ...overrideMatch }
       }
       // Handles arrays
       if (val.bsonType === 'array') {

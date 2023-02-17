@@ -1,3 +1,7 @@
+# 0.29.0
+
+- Optionally pass `mapper` for an override.
+
 # 0.28.0
 
 - Glob expressions supported for overrides `path`.
