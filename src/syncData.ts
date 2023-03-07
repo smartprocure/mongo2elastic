@@ -106,6 +106,7 @@ export const initSync = (
         emit('process', {
           success: docs.length - numErrors,
           fail: numErrors,
+          errors,
           initialScan: true,
         })
       } else {

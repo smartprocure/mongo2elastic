@@ -1,3 +1,7 @@
+# 0.30.0
+
+- Emit errors that happened during initial bulk sync
+
 # 0.29.0
 
 - Optionally pass `mapper` for an override.
