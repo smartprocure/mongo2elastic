@@ -1,3 +1,7 @@
+# 0.31.0
+
+- Latest `mongochangestream` - `runInitialScan` pipeline.
+
 # 0.30.0
 
 - Emit errors that happened during initial bulk sync
