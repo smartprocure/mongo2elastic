@@ -24,7 +24,7 @@ export const initSync = (
   const mapper = options.mapper || _.omit(['_id'])
   const index = options.index || indexFromCollection(collection)
   // Initialize sync
-  const sync = mongoChangeStream.initSync(redis, collection, options)
+  const sync = mongoChangeStream.initSync<Events>(redis, collection, options)
   // Use emitter from mongochangestream
   const emitter = sync.emitter
   const emit = (event: Events, data: object) => {
