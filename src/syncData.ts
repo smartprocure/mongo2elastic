@@ -19,7 +19,7 @@ export const initSync = (
   redis: Redis,
   collection: Collection,
   elastic: elasticsearch.Client,
-  options: SyncOptions & mongoChangeStream.SyncOptions = {}
+  options: SyncOptions & mongoChangeStream.SyncOptions & mongoChangeStream.ScanOptions = {}
 ) => {
   const mapper = options.mapper || _.omit(['_id'])
   const index = options.index || indexFromCollection(collection)
