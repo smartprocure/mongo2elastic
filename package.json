@@ -54,7 +54,7 @@
     "eventemitter3": "^5.0.1",
     "lodash": "^4.17.21",
     "minimatch": "^6.2.0",
-    "mongochangestream": "^0.37.0",
+    "mongochangestream": "git@github.com:smartprocure/mongochangestream.git#f/support-decending-sort-field",
     "obj-walker": "^1.7.0",
     "p-retry": "^5.1.1",
     "prom-utils": "^0.4.0"
