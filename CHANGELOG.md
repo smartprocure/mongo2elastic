@@ -1,3 +1,7 @@
+# 0.33.1
+
+- Latest `mongochangestream` - FSM bug fix.
+
 # 0.33.0
 
 - Latest `mongochangestream` - Drop health check code in favor of `cursorError` event.
