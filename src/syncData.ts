@@ -14,6 +14,19 @@ import { QueueOptions } from 'prom-utils'
 import { SyncOptions, Events, ConvertOptions } from './types.js'
 import { indexFromCollection } from './util.js'
 import { convertSchema } from './convertSchema.js'
+import { BulkResponse } from '@elastic/elasticsearch/lib/api/typesWithBodyKey.js'
+
+/**
+ * Filter errors from a bulk response
+ */
+const getBulkErrors = (response: BulkResponse) =>
+  response.items.filter(
+    (item) =>
+      item.create?.error ||
+      item.delete?.error ||
+      item.index?.error ||
+      item.update?.error
+  )
 
 export const initSync = (
   redis: Redis,
@@ -58,33 +71,48 @@ export const initSync = (
     return elastic.indices.putMapping({ index, ...mappings })
   }
   /**
-   * Process a change stream event.
+   * Process change stream events.
    */
-  const processRecord = async (doc: ChangeStreamDocument) => {
+  const processChangeStreamRecords = async (docs: ChangeStreamDocument[]) => {
     try {
-      if (doc.operationType === 'insert') {
-        await elastic.create({
-          index,
-          id: doc.fullDocument._id.toString(),
-          document: mapper(doc.fullDocument),
-        })
-      } else if (
-        doc.operationType === 'update' ||
-        doc.operationType === 'replace'
-      ) {
-        const document = doc.fullDocument ? mapper(doc.fullDocument) : {}
-        await elastic.index({
-          index,
-          id: doc.documentKey._id.toString(),
-          document,
-        })
-      } else if (doc.operationType === 'delete') {
-        await elastic.delete({
-          index,
-          id: doc.documentKey._id.toString(),
-        })
+      const operations = []
+      for (const doc of docs) {
+        if (doc.operationType === 'insert') {
+          operations.push([
+            { create: { _index: index, _id: doc.fullDocument._id.toString() } },
+            mapper(doc.fullDocument),
+          ])
+        } else if (
+          doc.operationType === 'update' ||
+          doc.operationType === 'replace'
+        ) {
+          const document = doc.fullDocument ? mapper(doc.fullDocument) : {}
+          operations.push([
+            { index: { _index: index, _id: doc.documentKey._id.toString() } },
+            document,
+          ])
+        } else if (doc.operationType === 'delete') {
+          operations.push([
+            { delete: { _index: index, _id: doc.documentKey._id.toString() } },
+          ])
+        }
       }
-      emit('process', { success: 1, changeStream: true })
+      const response = await elastic.bulk({
+        operations: operations.flat(),
+      })
+      // There were errors
+      if (response.errors) {
+        const errors = getBulkErrors(response)
+        const numErrors = errors.length
+        emit('process', {
+          success: docs.length - numErrors,
+          fail: numErrors,
+          errors,
+          changeStream: true,
+        })
+      } else {
+        emit('process', { success: docs.length, changeStream: true })
+      }
     } catch (e) {
       emit('error', { error: e, changeStream: true })
     }
@@ -100,8 +128,9 @@ export const initSync = (
           mapper(doc.fullDocument),
         ]),
       })
+      // There were errors
       if (response.errors) {
-        const errors = response.items.filter((doc) => doc.create?.error)
+        const errors = getBulkErrors(response)
         const numErrors = errors.length
         emit('process', {
           success: docs.length - numErrors,
@@ -117,8 +146,8 @@ export const initSync = (
     }
   }
 
-  const processChangeStream = (options?: ChangeStreamOptions) =>
-    sync.processChangeStream(processRecord, options)
+  const processChangeStream = (options?: QueueOptions & ChangeStreamOptions) =>
+    sync.processChangeStream(processChangeStreamRecords, options)
   const runInitialScan = (options?: QueueOptions & ScanOptions) =>
     sync.runInitialScan(processRecords, options)
 
@@ -126,6 +155,8 @@ export const initSync = (
     ...sync,
     /**
      * Process MongoDB change stream for the given collection.
+     * `options.batchSize` defaults to 500.
+     * `options.timeout` defaults to 30 seconds.
      */
     processChangeStream,
     /**
