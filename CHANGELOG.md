@@ -1,3 +1,8 @@
+# 0.36.0
+
+- `processChangeStream` now batches records. Default timeout before the queue is automatically
+flushed is 30 seconds.
+
 # 0.35.0
 
 - Latest `mongochangestream` - More robust error code handling for `missingOplogEntry`.
