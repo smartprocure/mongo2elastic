@@ -28,6 +28,15 @@ const getBulkErrors = (response: BulkResponse) =>
       item.update?.error
   )
 
+const getInitialCounts = () => {
+  const operationTypes = ['insert', 'update', 'replace', 'delete']
+  const counts: Record<string, number> = {}
+  for (const operationType of operationTypes) {
+    counts[operationType] = 0
+  }
+  return counts
+}
+
 export const initSync = (
   redis: Redis,
   collection: Collection,
@@ -76,7 +85,9 @@ export const initSync = (
   const processChangeStreamRecords = async (docs: ChangeStreamDocument[]) => {
     try {
       const operations = []
+      const counts = getInitialCounts()
       for (const doc of docs) {
+        counts[doc.operationType]++
         if (doc.operationType === 'insert') {
           operations.push([
             { create: { _index: index, _id: doc.fullDocument._id.toString() } },
@@ -109,9 +120,10 @@ export const initSync = (
           fail: numErrors,
           errors,
           changeStream: true,
+          counts,
         })
       } else {
-        emit('process', { success: docs.length, changeStream: true })
+        emit('process', { success: docs.length, changeStream: true, counts })
       }
     } catch (e) {
       emit('error', { error: e, changeStream: true })
