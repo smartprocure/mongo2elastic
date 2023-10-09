@@ -28,6 +28,15 @@ const getBulkErrors = (response: BulkResponse) =>
       item.update?.error
   )
 
+const getInitialCounts = () => {
+  const operationTypes = ['insert', 'update', 'replace', 'delete']
+  const counts: Record<string, number> = {}
+  for (const operationType of operationTypes) {
+    counts[operationType] = 0
+  }
+  return counts
+}
+
 export const initSync = (
   redis: Redis,
   collection: Collection,
@@ -76,8 +85,10 @@ export const initSync = (
   const processChangeStreamRecords = async (docs: ChangeStreamDocument[]) => {
     try {
       const operations = []
+      const operationCounts = getInitialCounts()
       for (const doc of docs) {
         if (doc.operationType === 'insert') {
+          operationCounts[doc.operationType]++
           operations.push([
             { create: { _index: index, _id: doc.fullDocument._id.toString() } },
             mapper(doc.fullDocument),
@@ -86,12 +97,14 @@ export const initSync = (
           doc.operationType === 'update' ||
           doc.operationType === 'replace'
         ) {
+          operationCounts[doc.operationType]++
           const document = doc.fullDocument ? mapper(doc.fullDocument) : {}
           operations.push([
             { index: { _index: index, _id: doc.documentKey._id.toString() } },
             document,
           ])
         } else if (doc.operationType === 'delete') {
+          operationCounts[doc.operationType]++
           operations.push([
             { delete: { _index: index, _id: doc.documentKey._id.toString() } },
           ])
@@ -109,9 +122,14 @@ export const initSync = (
           fail: numErrors,
           errors,
           changeStream: true,
+          operationCounts,
         })
       } else {
-        emit('process', { success: docs.length, changeStream: true })
+        emit('process', {
+          success: docs.length,
+          changeStream: true,
+          operationCounts,
+        })
       }
     } catch (e) {
       emit('error', { error: e, changeStream: true })
@@ -121,6 +139,7 @@ export const initSync = (
    * Process initial scan documents.
    */
   const processRecords = async (docs: ChangeStreamInsertDocument[]) => {
+    const operationCounts = { insert: docs.length }
     try {
       const response = await elastic.bulk({
         operations: docs.flatMap((doc) => [
@@ -137,9 +156,14 @@ export const initSync = (
           fail: numErrors,
           errors,
           initialScan: true,
+          operationCounts,
         })
       } else {
-        emit('process', { success: docs.length, initialScan: true })
+        emit('process', {
+          success: docs.length,
+          initialScan: true,
+          operationCounts,
+        })
       }
     } catch (e) {
       emit('error', { error: e, initialScan: true })

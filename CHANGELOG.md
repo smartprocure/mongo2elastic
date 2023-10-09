@@ -1,3 +1,7 @@
+# 0.38.0
+
+- Added `operationCounts` to the `process` event.
+
 # 0.37.0
 
 - Latest `mongochangestream` - Change stream option `operationTypes` (`insert`, `update`, `delete`, ...).
