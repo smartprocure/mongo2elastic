@@ -1,8 +1,11 @@
-import type { Document } from 'mongodb'
 import { JSONSchema } from 'mongochangestream'
 
-export interface SyncOptions {
-  mapper?: (doc: Document) => Document
+interface RenameOption {
+  /** Dotted path to renamed dotted path */
+  rename?: Record<string, string>
+}
+
+export interface SyncOptions extends RenameOption {
   index?: string
 }
 
@@ -11,7 +14,7 @@ export interface Override extends Record<string, any> {
   mapper?: (obj: JSONSchema, path: string) => JSONSchema
 }
 
-export interface ConvertOptions {
+export interface ConvertOptions extends RenameOption {
   omit?: string[]
   overrides?: Override[]
   passthrough?: string[]
