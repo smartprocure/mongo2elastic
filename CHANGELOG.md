@@ -1,6 +1,6 @@
 # 0.38.0
 
-- Emit the counts per operationType for `process` event.
+- Added `operationCounts` to the `process` event.
 
 # 0.37.0
 
