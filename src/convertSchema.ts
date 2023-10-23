@@ -92,6 +92,7 @@ export const convertSchema = (
     for (const dottedPath in rename) {
       const oldPath = dottedPath.split('.')
       const newPath = rename[dottedPath].split('.')
+      // Only allow renames such that nodes still keep the same parent
       if (!arrayStartsWith(oldPath, newPath.slice(0, -1))) {
         throw new Mongo2ElasticError(
           `Rename path prefix does not match: ${dottedPath}`
@@ -99,7 +100,7 @@ export const convertSchema = (
       }
     }
 
-    // Walk every node in the schema and rename children
+    // Walk every subschema, renaming properties
     walker(
       schema,
       ({ val: { bsonType, properties }, path }) => {
