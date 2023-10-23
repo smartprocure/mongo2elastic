@@ -3,6 +3,7 @@ import type {
   ChangeStreamDocument,
   ChangeStreamInsertDocument,
   Collection,
+  Document,
 } from 'mongodb'
 import type { Redis } from 'ioredis'
 import elasticsearch from '@elastic/elasticsearch'
@@ -12,7 +13,7 @@ import mongoChangeStream, {
 } from 'mongochangestream'
 import { QueueOptions } from 'prom-utils'
 import { SyncOptions, Events, ConvertOptions } from './types.js'
-import { indexFromCollection } from './util.js'
+import { renameKeys, indexFromCollection } from './util.js'
 import { convertSchema } from './convertSchema.js'
 import { BulkResponse } from '@elastic/elasticsearch/lib/api/typesWithBodyKey.js'
 
@@ -43,7 +44,8 @@ export const initSync = (
   elastic: elasticsearch.Client,
   options: SyncOptions & mongoChangeStream.SyncOptions = {}
 ) => {
-  const mapper = options.mapper || _.omit(['_id'])
+  const mapper = (doc: Document) =>
+    renameKeys(doc, { _id: '_mongoId', ...options.rename })
   const index = options.index || indexFromCollection(collection)
   // Initialize sync
   const sync = mongoChangeStream.initSync<Events>(redis, collection, options)

@@ -1,9 +1,13 @@
 import _ from 'lodash/fp.js'
-import { map, Node } from 'obj-walker'
+import { map, Node, walker } from 'obj-walker'
 import { estypes } from '@elastic/elasticsearch'
 import { ConvertOptions } from './types.js'
 import { minimatch } from 'minimatch'
-import { JSONSchema } from 'mongochangestream'
+import makeError from 'make-error'
+import { JSONSchema, traverseSchema } from 'mongochangestream'
+import { arrayStartsWith } from './util.js'
+
+export const Mongo2ElasticError = makeError('Mongo2ElasticError')
 
 const bsonTypeToElastic: Record<string, string> = {
   number: 'long',
@@ -66,24 +70,78 @@ export const convertSchema = (
   const omit = options.omit ? options.omit.map(_.toPath) : []
   const overrides = options.overrides || []
 
-  const mapper = (node: Node) => {
-    const { key, parents, path } = node
-    let { val } = node
+  type Schema = Record<string, estypes.MappingProperty>
+
+  const omitNodes = (node: Node) => {
+    const { val, path } = node
     if (val?.bsonType) {
       const cleanPath = cleanupPath(path)
-      const stringPath = cleanPath.join('.')
       // Optionally omit field
       if (omit.find(_.isEqual(cleanPath))) {
-        return
-      }
-      // Ignore top-level _id field
-      if (key === '_id' && parents.length === 2) {
         return
       }
       // Use the first type if multi-valued
       if (Array.isArray(val.bsonType)) {
         val.bsonType = val.bsonType[0]
       }
+    }
+    return val
+  }
+
+  const handleRename = (schema: Schema, rename: Record<string, string>) => {
+    for (const dottedPath in rename) {
+      const oldPath = dottedPath.split('.')
+      const newPath = rename[dottedPath].split('.')
+      if (!arrayStartsWith(oldPath, newPath.slice(0, -1))) {
+        throw new Mongo2ElasticError(
+          `Rename path prefix does not match: ${dottedPath}`
+        )
+      }
+    }
+
+    // Walk every node in the schema and rename children
+    walker(
+      schema,
+      ({ val: { bsonType, properties }, path }) => {
+        // Only objects can have their properties renamed
+        if (bsonType !== 'object' || !properties) {
+          return
+        }
+        const cleanPath = _.pull('_items', path)
+
+        for (const key in properties) {
+          const childPath = [...cleanPath, key].join('.')
+
+          // Property name to which property `key` should be renamed to
+          const newProperty = _.last(rename[childPath]?.split('.')) as
+            | string
+            | undefined
+
+          // Make sure we don't overwrite existing properties
+          if (newProperty !== undefined && newProperty in properties) {
+            throw new Mongo2ElasticError(
+              `Renaming ${childPath} to ${rename[childPath]} will overwrite property "${newProperty}"`
+            )
+          }
+
+          // Actually rename property
+          if (newProperty) {
+            const child = properties[key]
+            delete properties[key]
+            properties[newProperty] = child
+          }
+        }
+      },
+      { traverse: traverseSchema }
+    )
+  }
+
+  const overrideNodes = (node: Node) => {
+    let { val } = node
+    const { path } = node
+    if (val?.bsonType) {
+      const cleanPath = cleanupPath(path)
+      const stringPath = cleanPath.join('.')
       // Optionally override field
       const overrideMatch = overrides.find(({ path }) =>
         minimatch(stringPath, path)
@@ -101,6 +159,9 @@ export const convertSchema = (
     }
     return val
   }
+
   // Recursively convert the schema
-  return map(jsonSchema, mapper) as Record<string, estypes.MappingProperty>
+  const schema = map(jsonSchema, omitNodes) as Schema
+  handleRename(schema, { _id: '_mongoId', ...options.rename })
+  return map(schema, overrideNodes) as Schema
 }
