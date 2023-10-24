@@ -488,7 +488,7 @@ describe('convertSchema', () => {
       passthrough: ['copy_to'],
       rename: {
         numberOfEmployees: 'numEmployees',
-        'addresses.address': 'addresses.address1',
+        'addresses.address.address1': 'addresses.address.street',
       },
     }
     const result = convertSchema(schema, options)
@@ -509,9 +509,9 @@ describe('convertSchema', () => {
         numEmployees: { type: 'keyword', copy_to: 'all' },
         addresses: {
           properties: {
-            address1: {
+            address: {
               properties: {
-                address1: {
+                street: {
                   type: 'text',
                   fields: { keyword: { type: 'keyword', ignore_above: 256 } },
                   copy_to: 'all',

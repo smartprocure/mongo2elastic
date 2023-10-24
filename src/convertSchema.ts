@@ -70,8 +70,6 @@ export const convertSchema = (
   const omit = options.omit ? options.omit.map(_.toPath) : []
   const overrides = options.overrides || []
 
-  type Schema = Record<string, estypes.MappingProperty>
-
   const omitNodes = (node: Node) => {
     const { val, path } = node
     if (val?.bsonType) {
@@ -88,7 +86,7 @@ export const convertSchema = (
     return val
   }
 
-  const handleRename = (schema: Schema, rename: Record<string, string>) => {
+  const handleRename = (schema: JSONSchema, rename: Record<string, string>) => {
     for (const dottedPath in rename) {
       const oldPath = dottedPath.split('.')
       const newPath = rename[dottedPath].split('.')
@@ -162,7 +160,7 @@ export const convertSchema = (
   }
 
   // Recursively convert the schema
-  const schema = map(jsonSchema, omitNodes) as Schema
+  const schema = map(jsonSchema, omitNodes) as JSONSchema
   handleRename(schema, { _id: '_mongoId', ...options.rename })
-  return map(schema, overrideNodes) as Schema
+  return map(schema, overrideNodes) as estypes.MappingPropertyBase
 }
