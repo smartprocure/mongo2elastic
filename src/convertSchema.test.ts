@@ -119,6 +119,7 @@ describe('convertSchema', () => {
   test('Convert MongoDB schema to Elastic', () => {
     expect(convertSchema(schema)).toEqual({
       properties: {
+        _mongoId: { type: 'keyword' },
         parentId: { type: 'keyword' },
         name: {
           type: 'text',
@@ -204,6 +205,7 @@ describe('convertSchema', () => {
     }
     expect(convertSchema(schema, options)).toEqual({
       properties: {
+        _mongoId: { type: 'keyword' },
         parentId: { type: 'keyword' },
         name: {
           type: 'text',
@@ -302,6 +304,7 @@ describe('convertSchema', () => {
     const result = convertSchema(schema, options)
     expect(result).toEqual({
       properties: {
+        _mongoId: { type: 'keyword' },
         parentId: { type: 'keyword' },
         name: {
           type: 'text',
@@ -394,6 +397,7 @@ describe('convertSchema', () => {
     const result = convertSchema(schema, options)
     expect(result).toEqual({
       properties: {
+        _mongoId: { type: 'keyword', copy_to: 'all' },
         parentId: { type: 'keyword', copy_to: 'all' },
         name: {
           type: 'text',
@@ -476,5 +480,120 @@ describe('convertSchema', () => {
         createdAt: { type: 'date', copy_to: 'all' },
       },
     })
+  })
+  test('Should rename fields in the schema', () => {
+    const options = {
+      omit: ['integrations', 'permissions'],
+      overrides: [{ path: '*', copy_to: 'all' }],
+      passthrough: ['copy_to'],
+      rename: {
+        numberOfEmployees: 'numEmployees',
+        'addresses.address.address1': 'addresses.address.street',
+      },
+    }
+    const result = convertSchema(schema, options)
+    expect(result).toEqual({
+      properties: {
+        _mongoId: { type: 'keyword', copy_to: 'all' },
+        parentId: { type: 'keyword', copy_to: 'all' },
+        name: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          copy_to: 'all',
+        },
+        subType: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          copy_to: 'all',
+        },
+        numEmployees: { type: 'keyword', copy_to: 'all' },
+        addresses: {
+          properties: {
+            address: {
+              properties: {
+                street: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: 'all',
+                },
+                address2: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: 'all',
+                },
+                city: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: 'all',
+                },
+                county: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: 'all',
+                },
+                state: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: 'all',
+                },
+                zip: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: 'all',
+                },
+                country: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: 'all',
+                },
+                latitude: { type: 'long', copy_to: 'all' },
+                longitude: { type: 'long', copy_to: 'all' },
+                timezone: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: 'all',
+                },
+              },
+            },
+            name: {
+              type: 'text',
+              fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+              copy_to: 'all',
+            },
+            isPrimary: { type: 'boolean', copy_to: 'all' },
+          },
+        },
+        logo: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          copy_to: 'all',
+        },
+        verified: { type: 'boolean', copy_to: 'all' },
+        partner: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          copy_to: 'all',
+        },
+        createdAt: { type: 'date', copy_to: 'all' },
+      },
+    })
+  })
+  test('Should throw an exception if a rename field path prefix is different', () => {
+    expect(() =>
+      convertSchema(schema, {
+        rename: {
+          'integrations.stripe': 'foo.bar',
+        },
+      })
+    ).toThrow('Rename path prefix does not match: integrations.stripe')
+  })
+  test('Should throw an exception if a rename results in duplicate paths', () => {
+    expect(() =>
+      convertSchema(schema, {
+        rename: {
+          parentId: 'name',
+        },
+      })
+    ).toThrow('Renaming parentId to name will overwrite property "name"')
   })
 })

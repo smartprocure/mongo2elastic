@@ -1,3 +1,8 @@
+# 0.39.0
+
+- Removed `options.mapper` in favor of `options.rename` which takes an object of dotted path to renamed dotted path.
+  The `rename` option is available for syncing and converting a schema to a table.`_id` mapped to `_mongoId` by default.
+
 # 0.38.0
 
 - Added `operationCounts` to the `process` event.
@@ -9,7 +14,7 @@
 # 0.36.0
 
 - `processChangeStream` now batches records. Default timeout before the queue is automatically
-flushed is 30 seconds.
+  flushed is 30 seconds.
 
 # 0.35.0
 
