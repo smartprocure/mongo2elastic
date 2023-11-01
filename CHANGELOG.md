@@ -1,3 +1,7 @@
+# 0.39.1
+
+- Fixed bug preventing arrays of primitives from having overrides applied to them.
+
 # 0.39.0
 
 - Removed `options.mapper` in favor of `options.rename` which takes an object of dotted path to renamed dotted path.

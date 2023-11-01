@@ -147,7 +147,21 @@ export const convertSchema = (
       )
       if (overrideMatch) {
         const mapper = overrideMatch.mapper
-        val = { ...(mapper ? mapper(val, stringPath) : val), ...overrideMatch }
+        // check if array of primatives
+        if (
+          val.bsonType === 'array' &&
+          !['object', 'array'].includes(val.items.bsonType)
+        ) {
+          val.items = {
+            ...(mapper ? mapper(val.items, stringPath) : val.items),
+            ...overrideMatch,
+          }
+        } else {
+          val = {
+            ...(mapper ? mapper(val, stringPath) : val),
+            ...overrideMatch,
+          }
+        }
       }
       // Handles arrays
       if (val.bsonType === 'array') {

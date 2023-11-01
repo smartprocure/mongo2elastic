@@ -481,6 +481,38 @@ describe('convertSchema', () => {
       },
     })
   })
+  test('Should support copy_to on array of primitives, permissions field', () => {
+    const schema = {
+      bsonType: 'object',
+      additionalProperties: false,
+      required: ['createdAt', 'permissions'],
+      properties: {
+        createdAt: {
+          bsonType: 'date',
+        },
+        permissions: {
+          bsonType: 'array',
+          items: {
+            bsonType: 'string',
+          },
+        },
+      },
+    }
+    const options = {
+      overrides: [{ path: 'permissions', copy_to: 'all' }],
+      passthrough: ['copy_to'],
+    }
+    expect(convertSchema(schema, options)).toEqual({
+      properties: {
+        createdAt: { type: 'date' },
+        permissions: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          copy_to: 'all',
+        },
+      },
+    })
+  })
   test('Should rename fields in the schema', () => {
     const options = {
       omit: ['integrations', 'permissions'],
