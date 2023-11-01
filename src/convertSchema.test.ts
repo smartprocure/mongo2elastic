@@ -15,6 +15,7 @@ describe('convertSchema', () => {
       },
       name: {
         bsonType: 'string',
+        copy_to: 'searchbar',
       },
       subType: {
         bsonType: 'string',
@@ -22,6 +23,14 @@ describe('convertSchema', () => {
       numberOfEmployees: {
         bsonType: 'string',
         enum: ['1 - 5', '6 - 20', '21 - 50', '51 - 200', '201 - 500', '500+'],
+      },
+      keywords: {
+        bsonType: 'array',
+        items: {
+          bsonType: 'string',
+        },
+        copy_to: 'searchbar',
+        description: 'Some description',
       },
       addresses: {
         bsonType: 'array',
@@ -116,10 +125,10 @@ describe('convertSchema', () => {
       },
     },
   }
-  test('Convert MongoDB schema to Elastic', () => {
-    expect(convertSchema(schema)).toEqual({
+  test('Convert MongoDB schema to Elastic with no options', () => {
+    const mappings = convertSchema(schema)
+    expect(mappings).toEqual({
       properties: {
-        _mongoId: { type: 'keyword' },
         parentId: { type: 'keyword' },
         name: {
           type: 'text',
@@ -129,8 +138,10 @@ describe('convertSchema', () => {
           type: 'text',
           fields: { keyword: { type: 'keyword', ignore_above: 256 } },
         },
-        numberOfEmployees: {
-          type: 'keyword',
+        numberOfEmployees: { type: 'keyword' },
+        keywords: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
         },
         addresses: {
           properties: {
@@ -194,29 +205,41 @@ describe('convertSchema', () => {
           type: 'text',
           fields: { keyword: { type: 'keyword', ignore_above: 256 } },
         },
+        _mongoId: { type: 'keyword' },
       },
     })
   })
   test('Convert MongoDB schema to Elastic with options', () => {
     const options = {
-      omit: ['integrations', 'permissions'],
-      overrides: [{ path: 'addresses.address.l*', bsonType: 'double' }],
-      passthrough: ['copy_to'],
+      omit: ['integrations'],
+      overrides: [
+        { path: 'addresses.address.l*', bsonType: 'double' },
+        {
+          path: 'permissions',
+          copy_to: 'searchbar',
+          fields: { exact: { analyzer: 'exact', type: 'text' } },
+        },
+      ],
+      passthrough: ['copy_to', 'fields'],
     }
-    expect(convertSchema(schema, options)).toEqual({
+    const mappings = convertSchema(schema, options)
+    expect(mappings).toEqual({
       properties: {
-        _mongoId: { type: 'keyword' },
         parentId: { type: 'keyword' },
         name: {
           type: 'text',
           fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          copy_to: 'searchbar',
         },
         subType: {
           type: 'text',
           fields: { keyword: { type: 'keyword', ignore_above: 256 } },
         },
-        numberOfEmployees: {
-          type: 'keyword',
+        numberOfEmployees: { type: 'keyword' },
+        keywords: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          copy_to: 'searchbar',
         },
         addresses: {
           properties: {
@@ -282,6 +305,15 @@ describe('convertSchema', () => {
           fields: { keyword: { type: 'keyword', ignore_above: 256 } },
         },
         createdAt: { type: 'date' },
+        permissions: {
+          type: 'text',
+          fields: {
+            keyword: { type: 'keyword', ignore_above: 256 },
+            exact: { analyzer: 'exact', type: 'text' },
+          },
+          copy_to: 'searchbar',
+        },
+        _mongoId: { type: 'keyword' },
       },
     })
   })
@@ -301,8 +333,8 @@ describe('convertSchema', () => {
       ],
       passthrough: ['copy_to'],
     }
-    const result = convertSchema(schema, options)
-    expect(result).toEqual({
+    const mappings = convertSchema(schema, options)
+    expect(mappings).toEqual({
       properties: {
         _mongoId: { type: 'keyword' },
         parentId: { type: 'keyword' },
@@ -317,6 +349,11 @@ describe('convertSchema', () => {
           copy_to: 'foo',
         },
         numberOfEmployees: { type: 'keyword', copy_to: 'foo' },
+        keywords: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          copy_to: 'searchbar',
+        },
         addresses: {
           properties: {
             address: {
@@ -394,8 +431,8 @@ describe('convertSchema', () => {
       overrides: [{ path: '*', copy_to: 'all' }],
       passthrough: ['copy_to'],
     }
-    const result = convertSchema(schema, options)
-    expect(result).toEqual({
+    const mappings = convertSchema(schema, options)
+    expect(mappings).toEqual({
       properties: {
         _mongoId: { type: 'keyword', copy_to: 'all' },
         parentId: { type: 'keyword', copy_to: 'all' },
@@ -410,6 +447,11 @@ describe('convertSchema', () => {
           copy_to: 'all',
         },
         numberOfEmployees: { type: 'keyword', copy_to: 'all' },
+        keywords: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          copy_to: 'all',
+        },
         addresses: {
           properties: {
             address: {
@@ -491,8 +533,8 @@ describe('convertSchema', () => {
         'addresses.address.address1': 'addresses.address.street',
       },
     }
-    const result = convertSchema(schema, options)
-    expect(result).toEqual({
+    const mappings = convertSchema(schema, options)
+    expect(mappings).toEqual({
       properties: {
         _mongoId: { type: 'keyword', copy_to: 'all' },
         parentId: { type: 'keyword', copy_to: 'all' },
@@ -507,6 +549,11 @@ describe('convertSchema', () => {
           copy_to: 'all',
         },
         numEmployees: { type: 'keyword', copy_to: 'all' },
+        keywords: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          copy_to: 'all',
+        },
         addresses: {
           properties: {
             address: {
