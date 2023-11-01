@@ -1,6 +1,7 @@
 # 0.39.1
 
 - Fix `passthrough` when set for an array field.
+- Better passthrough logic for text fields.
 
 # 0.39.0
 

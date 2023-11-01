@@ -38,7 +38,7 @@ const convertSchemaNode = (obj: JSONSchema, passthrough: object) => {
   const elasticType = bsonTypeToElastic[obj.bsonType]
   // Add keyword sub-field to text type automatically
   if (elasticType === 'text') {
-    return {
+    return _.merge({
       type: 'text',
       fields: {
         keyword: {
@@ -46,8 +46,8 @@ const convertSchemaNode = (obj: JSONSchema, passthrough: object) => {
           ignore_above: 256,
         },
       },
-      ...passthrough,
-    }
+      passthrough,
+    })
   }
   if (elasticType) {
     return { type: elasticType, ...passthrough }
