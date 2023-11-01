@@ -22,18 +22,17 @@ const bsonTypeToElastic: Record<string, string> = {
   bool: 'boolean',
 }
 
-const convertSchemaNode = (obj: JSONSchema, options: ConvertOptions) => {
-  const field = options.passthrough ? _.pick(options.passthrough, obj) : {}
+const convertSchemaNode = (obj: JSONSchema, passthrough: object) => {
   if (obj.bsonType === 'object') {
     // Use flattened type since object can have arbitrary keys
     if (obj?.additionalProperties !== false) {
-      return { type: 'flattened', ...field }
+      return { type: 'flattened', ...passthrough }
     }
     return _.pick(['properties'], obj)
   }
   // String enum -> keyword
   if (obj.bsonType === 'string' && obj.enum) {
-    return { type: 'keyword', ...field }
+    return { type: 'keyword', ...passthrough }
   }
 
   const elasticType = bsonTypeToElastic[obj.bsonType]
@@ -47,11 +46,11 @@ const convertSchemaNode = (obj: JSONSchema, options: ConvertOptions) => {
           ignore_above: 256,
         },
       },
-      ...field,
+      ...passthrough,
     }
   }
   if (elasticType) {
-    return { type: elasticType, ...field }
+    return { type: elasticType, ...passthrough }
   }
 }
 
@@ -135,7 +134,7 @@ export const convertSchema = (
     )
   }
 
-  const overrideNodes = (node: Node) => {
+  const overrideAndConvert = (node: Node) => {
     let { val } = node
     const { path } = node
     if (val?.bsonType) {
@@ -149,12 +148,15 @@ export const convertSchema = (
         const mapper = overrideMatch.mapper
         val = { ...(mapper ? mapper(val, stringPath) : val), ...overrideMatch }
       }
+      const passthrough = options.passthrough
+        ? _.pick(options.passthrough, val)
+        : {}
       // Handles arrays
       if (val.bsonType === 'array') {
         // Unwrap arrays since ES doesn't support explicit array fields
-        return convertSchemaNode(val.items, options)
+        return convertSchemaNode(val.items, passthrough)
       }
-      return convertSchemaNode(val, options)
+      return convertSchemaNode(val, passthrough)
     }
     return val
   }
@@ -162,5 +164,5 @@ export const convertSchema = (
   // Recursively convert the schema
   const schema = map(jsonSchema, omitNodes) as JSONSchema
   handleRename(schema, { _id: '_mongoId', ...options.rename })
-  return map(schema, overrideNodes) as estypes.MappingPropertyBase
+  return map(schema, overrideAndConvert) as estypes.MappingPropertyBase
 }

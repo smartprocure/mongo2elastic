@@ -1,3 +1,7 @@
+# 0.39.1
+
+- Fix `passthrough` when set for an array field.
+
 # 0.39.0
 
 - Removed `options.mapper` in favor of `options.rename` which takes an object of dotted path to renamed dotted path.
