@@ -214,9 +214,13 @@ describe('convertSchema', () => {
       omit: ['integrations'],
       overrides: [
         { path: 'addresses.address.l*', bsonType: 'double' },
-        { path: 'permissions', copy_to: 'searchbar' },
+        {
+          path: 'permissions',
+          copy_to: 'searchbar',
+          fields: { exact: { analyzer: 'exact', type: 'text' } },
+        },
       ],
-      passthrough: ['copy_to'],
+      passthrough: ['copy_to', 'fields'],
     }
     const mappings = convertSchema(schema, options)
     expect(mappings).toEqual({
@@ -303,7 +307,10 @@ describe('convertSchema', () => {
         createdAt: { type: 'date' },
         permissions: {
           type: 'text',
-          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          fields: {
+            keyword: { type: 'keyword', ignore_above: 256 },
+            exact: { analyzer: 'exact', type: 'text' },
+          },
           copy_to: 'searchbar',
         },
         _mongoId: { type: 'keyword' },
