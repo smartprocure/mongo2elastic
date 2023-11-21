@@ -1,3 +1,7 @@
+# 0.40.0
+
+- Remove `updateDescription` since it is not needed and may cause a `BSONObjectTooLarge` error.
+
 # 0.39.1
 
 - Fix `passthrough` when set for an array field.
