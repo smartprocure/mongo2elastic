@@ -172,8 +172,14 @@ export const initSync = (
     }
   }
 
-  const processChangeStream = (options?: QueueOptions & ChangeStreamOptions) =>
-    sync.processChangeStream(processChangeStreamRecords, options)
+  const processChangeStream = (options: QueueOptions & ChangeStreamOptions) =>
+    sync.processChangeStream(processChangeStreamRecords, {
+      ...options,
+      pipeline: [
+        { $unset: ['updateDescription'] },
+        ...(options?.pipeline ?? []),
+      ],
+    })
   const runInitialScan = (options?: QueueOptions & ScanOptions) =>
     sync.runInitialScan(processRecords, options)
 
