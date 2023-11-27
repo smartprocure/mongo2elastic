@@ -1,4 +1,4 @@
-# 0.40.1
+# 0.41.0
 
 - Latest `mongochangestream` - Bug fixes.
 
