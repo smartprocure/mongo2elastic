@@ -1,3 +1,7 @@
+# 0.41.0
+
+- Latest `mongochangestream` - Bug fixes.
+
 # 0.40.0
 
 - Remove `updateDescription` since it is not needed and may cause a `BSONObjectTooLarge` error.
