@@ -1,3 +1,7 @@
+# 0.42.0
+
+- Latest `mongochangestream` - Support for parallel syncing of a collection.
+
 # 0.41.0
 
 - Latest `mongochangestream` - Bug fixes.
