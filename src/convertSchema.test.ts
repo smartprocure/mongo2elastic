@@ -1,5 +1,7 @@
+import { describe, expect, test } from 'vitest'
+
 import { convertSchema } from './convertSchema.js'
-import { ConvertOptions } from './types.js'
+import type { ConvertOptions } from './types.js'
 
 describe('convertSchema', () => {
   const schema = {

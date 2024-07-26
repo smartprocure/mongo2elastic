@@ -1,3 +1,10 @@
+# 0.43.0
+
+- Latest `mongochangestream` - Fixed omit bugs (not relevant to mongo2elastic).
+- Fixed: `processChangeStream` options should be optional. 
+- Changed testing library from jest to vitest.
+- Bumped peer dependencies for `elasticsearch`, `ioredis`, and `mongodb`.
+
 # 0.42.0
 
 - Latest `mongochangestream` - Support for parallel syncing of a collection.
