@@ -1,5 +1,5 @@
+import type { JSONSchema } from 'mongochangestream'
 import type { Document } from 'mongodb'
-import { JSONSchema } from 'mongochangestream'
 
 interface RenameOption {
   /** Dotted path to renamed dotted path */

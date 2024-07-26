@@ -1,5 +1,5 @@
 import _ from 'lodash/fp.js'
-import { Document, Collection } from 'mongodb'
+import type { Collection, Document } from 'mongodb'
 
 export const indexFromCollection = (collection: Collection) =>
   collection.collectionName.toLowerCase()

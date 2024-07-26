@@ -1,21 +1,22 @@
+import elasticsearch from '@elastic/elasticsearch'
+import type { BulkResponse } from '@elastic/elasticsearch/lib/api/typesWithBodyKey.js'
+import type { Redis } from 'ioredis'
 import _ from 'lodash/fp.js'
+import mongoChangeStream, {
+  type ChangeStreamOptions,
+  type ScanOptions,
+} from 'mongochangestream'
 import type {
   ChangeStreamDocument,
   ChangeStreamInsertDocument,
   Collection,
   Document,
 } from 'mongodb'
-import type { Redis } from 'ioredis'
-import elasticsearch from '@elastic/elasticsearch'
-import mongoChangeStream, {
-  ScanOptions,
-  ChangeStreamOptions,
-} from 'mongochangestream'
-import { QueueOptions } from 'prom-utils'
-import { SyncOptions, Events, ConvertOptions } from './types.js'
-import { renameKeys, indexFromCollection } from './util.js'
+import type { QueueOptions } from 'prom-utils'
+
 import { convertSchema } from './convertSchema.js'
-import { BulkResponse } from '@elastic/elasticsearch/lib/api/typesWithBodyKey.js'
+import type { ConvertOptions, Events, SyncOptions } from './types.js'
+import { indexFromCollection, renameKeys } from './util.js'
 
 /**
  * Filter errors from a bulk response
@@ -172,7 +173,7 @@ export const initSync = (
     }
   }
 
-  const processChangeStream = (options: QueueOptions & ChangeStreamOptions) =>
+  const processChangeStream = (options?: QueueOptions & ChangeStreamOptions) =>
     sync.processChangeStream(processChangeStreamRecords, {
       ...options,
       pipeline: [

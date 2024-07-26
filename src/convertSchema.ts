@@ -1,10 +1,11 @@
-import _ from 'lodash/fp.js'
-import { map, Node, walker } from 'obj-walker'
 import { estypes } from '@elastic/elasticsearch'
-import { ConvertOptions } from './types.js'
-import { minimatch } from 'minimatch'
+import _ from 'lodash/fp.js'
 import makeError from 'make-error'
-import { JSONSchema, traverseSchema } from 'mongochangestream'
+import { minimatch } from 'minimatch'
+import { type JSONSchema, traverseSchema } from 'mongochangestream'
+import { map, type Node, walker } from 'obj-walker'
+
+import { ConvertOptions } from './types.js'
 import { arrayStartsWith } from './util.js'
 
 export const Mongo2ElasticError = makeError('Mongo2ElasticError')
