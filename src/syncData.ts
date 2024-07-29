@@ -59,18 +59,16 @@ export const initSync = (
   const createIndexIgnoreMalformed = async (settings: object = {}) => {
     const obj = {
       index,
-      body: {
-        settings: _.merge(
-          {
-            index: {
-              mapping: {
-                ignore_malformed: true,
-              },
+      settings: _.merge(
+        {
+          index: {
+            mapping: {
+              ignore_malformed: true,
             },
           },
-          settings
-        ),
-      },
+        },
+        settings
+      ),
     }
     await elastic.indices.create(obj)
   }
