@@ -1,7 +1,11 @@
+# 0.44.0
+
+- Updated `createIndexIgnoreMalformed` - dropped `body` field.
+
 # 0.43.0
 
 - Latest `mongochangestream` - Fixed omit bugs (not relevant to mongo2elastic).
-- Fixed: `processChangeStream` options should be optional. 
+- Fixed: `processChangeStream` options should be optional.
 - Changed testing library from jest to vitest.
 - Bumped peer dependencies for `elasticsearch`, `ioredis`, and `mongodb`.
 
