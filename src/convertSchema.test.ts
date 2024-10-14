@@ -1,3 +1,4 @@
+import { JSONSchema } from 'mongochangestream'
 import { describe, expect, test } from 'vitest'
 
 import { convertSchema } from './convertSchema.js'
@@ -522,6 +523,108 @@ describe('convertSchema', () => {
           copy_to: 'all',
         },
         createdAt: { type: 'date', copy_to: 'all' },
+      },
+    })
+  })
+  test('Should apply multiple updates in sequence', () => {
+    const options = {
+      omit: ['integrations', 'permissions'],
+      overrides: [
+        // First, change this field from keyword to long
+        {
+          path: '*.zip',
+          bsonType: 'number',
+        },
+        // Then, change all long fields (including the one above) to double
+        {
+          path: '*',
+          mapper: (obj: JSONSchema) => {
+            if (obj.bsonType === 'number') {
+              return { ...obj, bsonType: 'double' }
+            }
+            return obj
+          },
+        },
+        // Then, change this field back to long
+        {
+          path: 'addresses.address.latitude',
+          bsonType: 'number',
+        },
+      ],
+    }
+
+    const mappings = convertSchema(schema, options)
+    expect(mappings).toEqual({
+      properties: {
+        _mongoId: { type: 'keyword' },
+        parentId: { type: 'keyword' },
+        name: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+        },
+        subType: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+        },
+        numberOfEmployees: { type: 'keyword' },
+        keywords: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+        },
+        addresses: {
+          properties: {
+            address: {
+              properties: {
+                address1: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                },
+                address2: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                },
+                city: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                },
+                county: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                },
+                state: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                },
+                zip: { type: 'double' },
+                country: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                },
+                latitude: { type: 'long' },
+                longitude: { type: 'double' },
+                timezone: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                },
+              },
+            },
+            name: {
+              type: 'text',
+              fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+            },
+            isPrimary: { type: 'boolean' },
+          },
+        },
+        logo: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+        },
+        verified: { type: 'boolean' },
+        partner: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+        },
+        createdAt: { type: 'date' },
       },
     })
   })

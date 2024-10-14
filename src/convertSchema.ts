@@ -143,14 +143,22 @@ export const convertSchema = (
     if (val?.bsonType) {
       const cleanPath = cleanupPath(path)
       const stringPath = cleanPath.join('.')
-      // Optionally override field
-      const overrideMatch = overrides.find(({ path }) =>
-        minimatch(stringPath, path)
-      )
-      if (overrideMatch) {
-        const mapper = overrideMatch.mapper
-        val = { ...(mapper ? mapper(val, stringPath) : val), ...overrideMatch }
-      }
+
+      // Apply all overrides that matches the node's path. If there are multiple
+      // (e.g. `*` and `foo.*` both match the path `foo.bar`), they are applied
+      // in sequence, such that the output of each override is passed as input
+      // to the next.
+      val = overrides.reduce((obj, override) => {
+        const { path, mapper } = override
+
+        return minimatch(stringPath, path)
+          ? {
+              ...(mapper ? mapper(obj, stringPath) : obj),
+              ...override,
+            }
+          : obj
+      }, val)
+
       const passthrough = options.passthrough
         ? _.pick(options.passthrough, val)
         : {}

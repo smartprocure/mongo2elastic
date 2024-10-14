@@ -1,3 +1,10 @@
+# 0.47.0
+
+-   **Breaking Change**: When there are multiple `overrides` that match the same
+    path (e.g. `*` and `foo.*` both match the path `foo.bar`), they will now be
+    applied in sequence, where the output of each override is passed as input to
+    the next.
+
 # 0.46.0
 
 -   Bump `mongochangestream` to enable "pausable" feature.
