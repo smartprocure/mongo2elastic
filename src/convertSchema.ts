@@ -61,16 +61,23 @@ const cleanupPath = _.pullAll(['properties', 'items'])
 
 /**
  * Convert MongoDB JSON schema to Elasticsearch mapping.
- * Optionally, omit fields and change the BSON type for fields.
- * The latter is useful where a more-specific numeric type is needed.
+ *
+ * There are options that allow you to preprocess nodes, omit fields, rename
+ * fields, and change the BSON type for fields (e.g. when a more specific
+ * numeric type is needed). @see {@link ConvertOptions} for details.
  */
 export const convertSchema = (
   jsonSchema: JSONSchema,
   options: ConvertOptions = {}
 ) => {
   // Handle options
+  const { mapSchema } = options
   const omit = options.omit ? options.omit.map(_.toPath) : []
   const overrides = options.overrides || []
+
+  if (mapSchema) {
+    jsonSchema = map(jsonSchema, mapSchema)
+  }
 
   const omitNodes = (node: Node) => {
     const { val, path } = node

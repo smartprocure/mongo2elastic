@@ -1,3 +1,4 @@
+import _ from 'lodash/fp.js'
 import { JSONSchema } from 'mongochangestream'
 import { describe, expect, test } from 'vitest'
 
@@ -747,5 +748,307 @@ describe('convertSchema', () => {
         },
       })
     ).toThrow('Renaming parentId to name will overwrite property "name"')
+  })
+  describe('the `mapSchema` option', () => {
+    test('can be a no-op', () => {
+      expect(convertSchema(schema, { mapSchema: ({ val }) => val })).toEqual({
+        properties: {
+          parentId: { type: 'keyword' },
+          name: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
+          subType: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
+          numberOfEmployees: { type: 'keyword' },
+          keywords: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
+          addresses: {
+            properties: {
+              address: {
+                properties: {
+                  address1: {
+                    type: 'text',
+                    fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  },
+                  address2: {
+                    type: 'text',
+                    fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  },
+                  city: {
+                    type: 'text',
+                    fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  },
+                  county: {
+                    type: 'text',
+                    fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  },
+                  state: {
+                    type: 'text',
+                    fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  },
+                  zip: {
+                    type: 'text',
+                    fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  },
+                  country: {
+                    type: 'text',
+                    fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  },
+                  latitude: { type: 'long' },
+                  longitude: { type: 'long' },
+                  timezone: {
+                    type: 'text',
+                    fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  },
+                },
+              },
+              name: {
+                type: 'text',
+                fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+              },
+              isPrimary: { type: 'boolean' },
+            },
+          },
+          logo: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
+          verified: { type: 'boolean' },
+          partner: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
+          integrations: { type: 'flattened' },
+          createdAt: { type: 'date' },
+          permissions: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
+          _mongoId: { type: 'keyword' },
+        },
+      })
+    })
+    test('can replace a leaf node', () => {
+      expect(
+        convertSchema(schema, {
+          mapSchema: ({ path, val }) => {
+            if (
+              _.isEqual(path, [
+                'properties',
+                'addresses',
+                'items',
+                'properties',
+                'address',
+                'properties',
+                'zip',
+                'bsonType',
+              ])
+            ) {
+              // Was originally 'string'. In the expected output below, 'text'
+              // is replaced with 'long'.
+              return 'number'
+            }
+
+            return val
+          },
+        })
+      ).toEqual({
+        properties: {
+          parentId: { type: 'keyword' },
+          name: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
+          subType: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
+          numberOfEmployees: { type: 'keyword' },
+          keywords: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
+          addresses: {
+            properties: {
+              address: {
+                properties: {
+                  address1: {
+                    type: 'text',
+                    fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  },
+                  address2: {
+                    type: 'text',
+                    fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  },
+                  city: {
+                    type: 'text',
+                    fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  },
+                  county: {
+                    type: 'text',
+                    fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  },
+                  state: {
+                    type: 'text',
+                    fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  },
+                  zip: { type: 'long' },
+                  country: {
+                    type: 'text',
+                    fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  },
+                  latitude: { type: 'long' },
+                  longitude: { type: 'long' },
+                  timezone: {
+                    type: 'text',
+                    fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  },
+                },
+              },
+              name: {
+                type: 'text',
+                fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+              },
+              isPrimary: { type: 'boolean' },
+            },
+          },
+          logo: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
+          verified: { type: 'boolean' },
+          partner: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
+          integrations: { type: 'flattened' },
+          createdAt: { type: 'date' },
+          permissions: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
+          _mongoId: { type: 'keyword' },
+        },
+      })
+    })
+    test('can replace a non-leaf node', () => {
+      expect(
+        convertSchema(schema, {
+          mapSchema: ({ path, val }) => {
+            if (_.isEqual(path, ['properties', 'addresses', 'items'])) {
+              // This should result in { type: 'flattened' }, since we're
+              // replacing this node with one where `additionalProperties` is
+              // missing, i.e. defaults to true.
+              return { bsonType: 'object' }
+            }
+
+            return val
+          },
+        })
+      ).toEqual({
+        properties: {
+          parentId: { type: 'keyword' },
+          name: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
+          subType: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
+          numberOfEmployees: { type: 'keyword' },
+          keywords: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
+          addresses: { type: 'flattened' },
+          logo: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
+          verified: { type: 'boolean' },
+          partner: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
+          integrations: { type: 'flattened' },
+          createdAt: { type: 'date' },
+          permissions: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
+          _mongoId: { type: 'keyword' },
+        },
+      })
+    })
+    test('can remove nodes', () => {
+      expect(
+        convertSchema(schema, {
+          mapSchema: ({ path, val }) => {
+            if (
+              _.isEqual(path, [
+                'properties',
+                'addresses',
+                'items',
+                'additionalProperties',
+              ]) ||
+              _.isEqual(path, [
+                'properties',
+                'addresses',
+                'items',
+                'properties',
+              ])
+            ) {
+              // This should result in { type: 'flattened' }, since we removed
+              // the properties and made it so that we implicitly allow
+              // additional properties (by removing `additionalProperties`
+              // altogether, so that it defaults to true).
+              return undefined
+            }
+
+            return val
+          },
+        })
+      ).toEqual({
+        properties: {
+          parentId: { type: 'keyword' },
+          name: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
+          subType: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
+          numberOfEmployees: { type: 'keyword' },
+          keywords: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
+          addresses: { type: 'flattened' },
+          logo: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
+          verified: { type: 'boolean' },
+          partner: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
+          integrations: { type: 'flattened' },
+          createdAt: { type: 'date' },
+          permissions: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
+          _mongoId: { type: 'keyword' },
+        },
+      })
+    })
   })
 })
