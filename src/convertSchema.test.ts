@@ -531,27 +531,31 @@ describe('convertSchema', () => {
     const options = {
       omit: ['integrations', 'permissions'],
       overrides: [
-        // First, change this field from keyword to long
-        {
-          path: '*.zip',
-          bsonType: 'number',
-        },
-        // Then, change all long fields (including the one above) to double
+        // Copy to 'all' for all string fields.
         {
           path: '*',
-          mapper: (obj: JSONSchema) => {
-            if (obj.bsonType === 'number') {
-              return { ...obj, bsonType: 'double' }
-            }
-            return obj
-          },
+          mapper: (obj: JSONSchema) => ({
+            ...obj,
+            ...((obj.bsonType === 'string' ||
+              obj.items?.bsonType === 'string') && { copy_to: ['all'] }),
+          }),
         },
-        // Then, change this field back to long
+        // Additionally, copy to 'full_address' for string fields within the
+        // `addresses.address` object.
+        //
+        // This should result in `copy_to: ['all', 'full_address']`, because
+        // both the above mapper and this one should be applied in sequence.
         {
-          path: 'addresses.address.latitude',
-          bsonType: 'number',
+          path: 'addresses.address.*',
+          mapper: (obj: JSONSchema) => ({
+            ...obj,
+            ...(obj.bsonType === 'string' && {
+              copy_to: [...(obj.copy_to || []), 'full_address'],
+            }),
+          }),
         },
       ],
+      passthrough: ['copy_to'],
     }
 
     const mappings = convertSchema(schema, options)
@@ -562,15 +566,18 @@ describe('convertSchema', () => {
         name: {
           type: 'text',
           fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          copy_to: ['all'],
         },
         subType: {
           type: 'text',
           fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          copy_to: ['all'],
         },
-        numberOfEmployees: { type: 'keyword' },
+        numberOfEmployees: { type: 'keyword', copy_to: ['all'] },
         keywords: {
           type: 'text',
           fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          copy_to: ['all'],
         },
         addresses: {
           properties: {
@@ -579,39 +586,51 @@ describe('convertSchema', () => {
                 address1: {
                   type: 'text',
                   fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: ['all', 'full_address'],
                 },
                 address2: {
                   type: 'text',
                   fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: ['all', 'full_address'],
                 },
                 city: {
                   type: 'text',
                   fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: ['all', 'full_address'],
                 },
                 county: {
                   type: 'text',
                   fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: ['all', 'full_address'],
                 },
                 state: {
                   type: 'text',
                   fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: ['all', 'full_address'],
                 },
-                zip: { type: 'double' },
+                zip: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: ['all', 'full_address'],
+                },
                 country: {
                   type: 'text',
                   fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: ['all', 'full_address'],
                 },
                 latitude: { type: 'long' },
-                longitude: { type: 'double' },
+                longitude: { type: 'long' },
                 timezone: {
                   type: 'text',
                   fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: ['all', 'full_address'],
                 },
               },
             },
             name: {
               type: 'text',
               fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+              copy_to: ['all'],
             },
             isPrimary: { type: 'boolean' },
           },
@@ -619,11 +638,13 @@ describe('convertSchema', () => {
         logo: {
           type: 'text',
           fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          copy_to: ['all'],
         },
         verified: { type: 'boolean' },
         partner: {
           type: 'text',
           fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          copy_to: ['all'],
         },
         createdAt: { type: 'date' },
       },
