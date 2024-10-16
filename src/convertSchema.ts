@@ -61,16 +61,23 @@ const cleanupPath = _.pullAll(['properties', 'items'])
 
 /**
  * Convert MongoDB JSON schema to Elasticsearch mapping.
- * Optionally, omit fields and change the BSON type for fields.
- * The latter is useful where a more-specific numeric type is needed.
+ *
+ * There are options that allow you to preprocess nodes, omit fields, rename
+ * fields, and change the BSON type for fields (e.g. when a more specific
+ * numeric type is needed). @see {@link ConvertOptions} for details.
  */
 export const convertSchema = (
   jsonSchema: JSONSchema,
   options: ConvertOptions = {}
 ) => {
   // Handle options
+  const { mapSchema } = options
   const omit = options.omit ? options.omit.map(_.toPath) : []
   const overrides = options.overrides || []
+
+  if (mapSchema) {
+    jsonSchema = map(jsonSchema, mapSchema)
+  }
 
   const omitNodes = (node: Node) => {
     const { val, path } = node
@@ -143,14 +150,22 @@ export const convertSchema = (
     if (val?.bsonType) {
       const cleanPath = cleanupPath(path)
       const stringPath = cleanPath.join('.')
-      // Optionally override field
-      const overrideMatch = overrides.find(({ path }) =>
-        minimatch(stringPath, path)
-      )
-      if (overrideMatch) {
-        const mapper = overrideMatch.mapper
-        val = { ...(mapper ? mapper(val, stringPath) : val), ...overrideMatch }
-      }
+
+      // Apply all overrides that matches the node's path. If there are multiple
+      // (e.g. `*` and `foo.*` both match the path `foo.bar`), they are applied
+      // in sequence, such that the output of each override is passed as input
+      // to the next.
+      val = overrides.reduce((obj, override) => {
+        const { path, mapper } = override
+
+        return minimatch(stringPath, path)
+          ? {
+              ...(mapper ? mapper(obj, stringPath) : obj),
+              ...override,
+            }
+          : obj
+      }, val)
+
       const passthrough = options.passthrough
         ? _.pick(options.passthrough, val)
         : {}

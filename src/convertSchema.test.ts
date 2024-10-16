@@ -1,3 +1,5 @@
+import _ from 'lodash/fp.js'
+import { JSONSchema } from 'mongochangestream'
 import { describe, expect, test } from 'vitest'
 
 import { convertSchema } from './convertSchema.js'
@@ -525,6 +527,129 @@ describe('convertSchema', () => {
       },
     })
   })
+  test('Should apply multiple updates in sequence', () => {
+    const options = {
+      omit: ['integrations', 'permissions'],
+      overrides: [
+        // Copy to 'all' for all string fields.
+        {
+          path: '*',
+          mapper: (obj: JSONSchema) => ({
+            ...obj,
+            ...((obj.bsonType === 'string' ||
+              obj.items?.bsonType === 'string') && { copy_to: ['all'] }),
+          }),
+        },
+        // Additionally, copy to 'full_address' for string fields within the
+        // `addresses.address` object.
+        //
+        // This should result in `copy_to: ['all', 'full_address']`, because
+        // both the above mapper and this one should be applied in sequence.
+        {
+          path: 'addresses.address.*',
+          mapper: (obj: JSONSchema) => ({
+            ...obj,
+            ...(obj.bsonType === 'string' && {
+              copy_to: [...(obj.copy_to || []), 'full_address'],
+            }),
+          }),
+        },
+      ],
+      passthrough: ['copy_to'],
+    }
+
+    const mappings = convertSchema(schema, options)
+    expect(mappings).toEqual({
+      properties: {
+        _mongoId: { type: 'keyword' },
+        parentId: { type: 'keyword' },
+        name: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          copy_to: ['all'],
+        },
+        subType: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          copy_to: ['all'],
+        },
+        numberOfEmployees: { type: 'keyword', copy_to: ['all'] },
+        keywords: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          copy_to: ['all'],
+        },
+        addresses: {
+          properties: {
+            address: {
+              properties: {
+                address1: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: ['all', 'full_address'],
+                },
+                address2: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: ['all', 'full_address'],
+                },
+                city: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: ['all', 'full_address'],
+                },
+                county: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: ['all', 'full_address'],
+                },
+                state: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: ['all', 'full_address'],
+                },
+                zip: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: ['all', 'full_address'],
+                },
+                country: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: ['all', 'full_address'],
+                },
+                latitude: { type: 'long' },
+                longitude: { type: 'long' },
+                timezone: {
+                  type: 'text',
+                  fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  copy_to: ['all', 'full_address'],
+                },
+              },
+            },
+            name: {
+              type: 'text',
+              fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+              copy_to: ['all'],
+            },
+            isPrimary: { type: 'boolean' },
+          },
+        },
+        logo: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          copy_to: ['all'],
+        },
+        verified: { type: 'boolean' },
+        partner: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          copy_to: ['all'],
+        },
+        createdAt: { type: 'date' },
+      },
+    })
+  })
   test('Should rename fields in the schema', () => {
     const options = {
       omit: ['integrations', 'permissions'],
@@ -644,5 +769,110 @@ describe('convertSchema', () => {
         },
       })
     ).toThrow('Renaming parentId to name will overwrite property "name"')
+  })
+  describe('the `mapSchema` option', () => {
+    test('can replace a leaf node', () => {
+      expect(
+        convertSchema(schema, {
+          mapSchema: ({ path, val }) => {
+            if (
+              _.isEqual(path, [
+                'properties',
+                'addresses',
+                'items',
+                'properties',
+                'address',
+                'properties',
+                'zip',
+                'bsonType',
+              ])
+            ) {
+              // Was originally 'string'. In the expected output below, 'text'
+              // is replaced with 'long'.
+              return 'number'
+            }
+
+            return val
+          },
+        })
+      ).toEqual({
+        properties: {
+          parentId: { type: 'keyword' },
+          name: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
+          subType: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
+          numberOfEmployees: { type: 'keyword' },
+          keywords: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
+          addresses: {
+            properties: {
+              address: {
+                properties: {
+                  address1: {
+                    type: 'text',
+                    fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  },
+                  address2: {
+                    type: 'text',
+                    fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  },
+                  city: {
+                    type: 'text',
+                    fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  },
+                  county: {
+                    type: 'text',
+                    fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  },
+                  state: {
+                    type: 'text',
+                    fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  },
+                  zip: { type: 'long' },
+                  country: {
+                    type: 'text',
+                    fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  },
+                  latitude: { type: 'long' },
+                  longitude: { type: 'long' },
+                  timezone: {
+                    type: 'text',
+                    fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+                  },
+                },
+              },
+              name: {
+                type: 'text',
+                fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+              },
+              isPrimary: { type: 'boolean' },
+            },
+          },
+          logo: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
+          verified: { type: 'boolean' },
+          partner: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
+          integrations: { type: 'flattened' },
+          createdAt: { type: 'date' },
+          permissions: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
+          _mongoId: { type: 'keyword' },
+        },
+      })
+    })
   })
 })
