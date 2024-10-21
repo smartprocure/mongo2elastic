@@ -1,3 +1,7 @@
+# 0.48.0
+
+-   Latest `mongochangestream` - Add `lastFlush` to `stats` event.
+
 # 0.47.0
 
 -   **Breaking Change**: When there are multiple `overrides` that match the same
