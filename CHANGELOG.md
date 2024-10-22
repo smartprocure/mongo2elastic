@@ -1,3 +1,7 @@
+# 0.49.0
+
+-   Latest `mongochangestream` - Fix for downstream `processRecords` mutation.
+
 # 0.48.0
 
 -   Latest `mongochangestream` - Add `lastFlush` to `stats` event.
