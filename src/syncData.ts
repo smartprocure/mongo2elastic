@@ -1,11 +1,10 @@
 import elasticsearch from '@elastic/elasticsearch'
 import type { BulkResponse } from '@elastic/elasticsearch/lib/api/typesWithBodyKey.js'
+import _debug from 'debug'
 import type { Redis } from 'ioredis'
 import _ from 'lodash/fp.js'
-import mongoChangeStream, {
-  type ChangeStreamOptions,
-  type ScanOptions,
-} from 'mongochangestream'
+import { type ChangeStreamOptions, type ScanOptions } from 'mongochangestream'
+import * as mongoChangeStream from 'mongochangestream'
 import type {
   ChangeStreamDocument,
   ChangeStreamInsertDocument,
@@ -15,7 +14,13 @@ import type {
 import type { QueueOptions } from 'prom-utils'
 
 import { convertSchema } from './convertSchema.js'
-import type { ConvertOptions, Events, SyncOptions } from './types.js'
+import type {
+  ConvertOptions,
+  Events,
+  OperationCounts,
+  ProcessEvent,
+  SyncOptions,
+} from './types.js'
 import { indexFromCollection, renameKeys } from './util.js'
 
 /**
@@ -39,14 +44,19 @@ const getInitialCounts = () => {
   return counts
 }
 
+const debug = _debug('mongo2elastic:sync')
+
 export const initSync = (
   redis: Redis,
   collection: Collection,
   elastic: elasticsearch.Client,
   options: SyncOptions & mongoChangeStream.SyncOptions = {}
 ) => {
-  const mapper = (doc: Document) =>
+  const mapper = (doc: Document) => {
     renameKeys(doc, { _id: '_mongoId', ...options.rename })
+    debug('Mapped doc %o', doc)
+    return doc
+  }
   const index = options.index || indexFromCollection(collection)
   // Initialize sync
   const sync = mongoChangeStream.initSync<Events>(redis, collection, options)
@@ -54,6 +64,31 @@ export const initSync = (
   const emitter = sync.emitter
   const emit = (event: Events, data: object) => {
     emitter.emit(event, { type: event, ...data })
+  }
+
+  const handleBulkResponse = (
+    response: BulkResponse,
+    operationCounts: OperationCounts,
+    numDocs: number
+  ) => {
+    // There were errors
+    if (response.errors) {
+      const errors = getBulkErrors(response)
+      const numErrors = errors.length
+      emit('process', {
+        success: numDocs - numErrors,
+        fail: numErrors,
+        errors,
+        changeStream: true,
+        operationCounts,
+      } as ProcessEvent)
+    } else {
+      emit('process', {
+        success: numDocs,
+        changeStream: true,
+        operationCounts,
+      } as ProcessEvent)
+    }
   }
 
   const createIndexIgnoreMalformed = async (settings: object = {}) => {
@@ -84,91 +119,51 @@ export const initSync = (
    * Process change stream events.
    */
   const processChangeStreamRecords = async (docs: ChangeStreamDocument[]) => {
-    try {
-      const operations = []
-      const operationCounts = getInitialCounts()
-      for (const doc of docs) {
-        if (doc.operationType === 'insert') {
-          operationCounts[doc.operationType]++
-          operations.push([
-            { create: { _index: index, _id: doc.fullDocument._id.toString() } },
-            mapper(doc.fullDocument),
-          ])
-        } else if (
-          doc.operationType === 'update' ||
-          doc.operationType === 'replace'
-        ) {
-          operationCounts[doc.operationType]++
-          const document = doc.fullDocument ? mapper(doc.fullDocument) : {}
-          operations.push([
-            { index: { _index: index, _id: doc.documentKey._id.toString() } },
-            document,
-          ])
-        } else if (doc.operationType === 'delete') {
-          operationCounts[doc.operationType]++
-          operations.push([
-            { delete: { _index: index, _id: doc.documentKey._id.toString() } },
-          ])
-        }
+    const operations = []
+    const operationCounts = getInitialCounts()
+    for (const doc of docs) {
+      if (doc.operationType === 'insert') {
+        operationCounts[doc.operationType]++
+        operations.push([
+          { create: { _index: index, _id: doc.fullDocument._id.toString() } },
+          mapper(doc.fullDocument),
+        ])
+      } else if (
+        doc.operationType === 'update' ||
+        doc.operationType === 'replace'
+      ) {
+        operationCounts[doc.operationType]++
+        const document = doc.fullDocument ? mapper(doc.fullDocument) : {}
+        operations.push([
+          { index: { _index: index, _id: doc.documentKey._id.toString() } },
+          document,
+        ])
+      } else if (doc.operationType === 'delete') {
+        operationCounts[doc.operationType]++
+        operations.push([
+          { delete: { _index: index, _id: doc.documentKey._id.toString() } },
+        ])
       }
-      const response = await elastic.bulk({
-        operations: operations.flat(),
-      })
-      // There were errors
-      if (response.errors) {
-        const errors = getBulkErrors(response)
-        const numErrors = errors.length
-        emit('process', {
-          success: docs.length - numErrors,
-          fail: numErrors,
-          errors,
-          changeStream: true,
-          operationCounts,
-        })
-      } else {
-        emit('process', {
-          success: docs.length,
-          changeStream: true,
-          operationCounts,
-        })
-      }
-    } catch (e) {
-      emit('error', { error: e, changeStream: true })
     }
+    const response = await elastic.bulk({
+      operations: operations.flat(),
+    })
+
+    handleBulkResponse(response, operationCounts, docs.length)
   }
   /**
    * Process initial scan documents.
    */
   const processRecords = async (docs: ChangeStreamInsertDocument[]) => {
     const operationCounts = { insert: docs.length }
-    try {
-      const response = await elastic.bulk({
-        operations: docs.flatMap((doc) => [
-          { create: { _index: index, _id: doc.fullDocument._id } },
-          mapper(doc.fullDocument),
-        ]),
-      })
-      // There were errors
-      if (response.errors) {
-        const errors = getBulkErrors(response)
-        const numErrors = errors.length
-        emit('process', {
-          success: docs.length - numErrors,
-          fail: numErrors,
-          errors,
-          initialScan: true,
-          operationCounts,
-        })
-      } else {
-        emit('process', {
-          success: docs.length,
-          initialScan: true,
-          operationCounts,
-        })
-      }
-    } catch (e) {
-      emit('error', { error: e, initialScan: true })
-    }
+    const response = await elastic.bulk({
+      operations: docs.flatMap((doc) => [
+        { create: { _index: index, _id: doc.fullDocument._id } },
+        mapper(doc.fullDocument),
+      ]),
+    })
+
+    handleBulkResponse(response, operationCounts, docs.length)
   }
 
   const processChangeStream = (options?: QueueOptions & ChangeStreamOptions) =>

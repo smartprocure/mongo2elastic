@@ -1,5 +1,5 @@
 import type { JSONSchema } from 'mongochangestream'
-import type { Document } from 'mongodb'
+import type { ChangeStreamDocument, Document } from 'mongodb'
 import { type Mapper } from 'obj-walker'
 
 interface RenameOption {
@@ -45,4 +45,25 @@ export interface ConvertOptions extends RenameOption {
   passthrough?: string[]
 }
 
-export type Events = 'process' | 'error'
+export type Events = 'process'
+
+export type OperationCounts = Partial<
+  Record<ChangeStreamDocument['operationType'], number>
+>
+interface BaseProcessEvent {
+  type: 'process'
+  success: number
+  fail?: number
+  errors?: unknown[]
+  operationCounts: OperationCounts
+}
+
+export interface InitialScanProcessEvent extends BaseProcessEvent {
+  initialScan: true
+}
+
+export interface ChangeStreamProcessEvent extends BaseProcessEvent {
+  changeStream: true
+}
+
+export type ProcessEvent = InitialScanProcessEvent | ChangeStreamProcessEvent

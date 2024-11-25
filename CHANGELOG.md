@@ -1,3 +1,7 @@
+# 0.50.0
+
+-   Remove try/catch and rely on retry logic in `mongochangestream`.
+
 # 0.49.0
 
 -   Latest `mongochangestream` - Fix for downstream `processRecords` mutation.
