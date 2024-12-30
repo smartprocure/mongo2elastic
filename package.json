@@ -5,7 +5,10 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
-  "repository": "git://github.com/smartprocure/mongo2elastic.git",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/smartprocure/mongo2elastic.git"
+  },
   "scripts": {
     "prepare": "npm test && npm run lint && npm run build",
     "test": "vitest run",
@@ -69,12 +72,8 @@
     "semi": false,
     "singleQuote": true,
     "trailingComma": "es5",
-    "plugins": [
-      "@trivago/prettier-plugin-sort-imports"
-    ],
-    "importOrder": [
-      "^[./]"
-    ],
+    "plugins": ["@trivago/prettier-plugin-sort-imports"],
+    "importOrder": ["^[./]"],
     "importOrderSortSpecifiers": true,
     "importOrderCaseInsensitive": true,
     "importOrderSeparation": true
