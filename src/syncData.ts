@@ -21,7 +21,8 @@ import type {
   ProcessEvent,
   SyncOptions,
 } from './types.js'
-import { indexFromCollection, renameKeys } from './util.js'
+import { indexFromCollection } from './util.js'
+import { renameKeys } from 'mongochangestream'
 
 /**
  * Filter errors from a bulk response
@@ -75,6 +76,7 @@ export const initSync = (
     if (response.errors) {
       const errors = getBulkErrors(response)
       const numErrors = errors.length
+      debug('Errors %O', errors)
       emit('process', {
         success: numDocs - numErrors,
         fail: numErrors,
