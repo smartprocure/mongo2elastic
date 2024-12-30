@@ -14,7 +14,7 @@ import { initSync, SyncOptions } from './index.js'
 
 const index = 'testing'
 
-const getConns = _.memoize(async (_x?: any) => {
+const getConns = _.memoize(async () => {
   // Redis
   const redis = new Redis({ keyPrefix: 'testing:' })
   // MongoDB
