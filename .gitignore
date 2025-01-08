@@ -68,3 +68,5 @@ dist/
 src/syncPlayground.ts
 
 .idea/
+
+.env
