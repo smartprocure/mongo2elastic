@@ -9,6 +9,11 @@ import { type Db, MongoClient } from 'mongodb'
 import ms from 'ms'
 import { setTimeout } from 'node:timers/promises'
 import { describe, expect, test } from 'vitest'
+import debug from 'debug'
+
+// Output via console.info (stdout) instead of stderr.
+// Without this debug statements are swallowed by vitest.
+debug.log = console.info.bind(console)
 
 import { initSync, SyncOptions } from './index.js'
 
