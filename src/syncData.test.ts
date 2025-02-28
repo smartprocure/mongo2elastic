@@ -1,4 +1,5 @@
 import elasticsearch from '@elastic/elasticsearch'
+import debug from 'debug'
 import Redis from 'ioredis'
 import _ from 'lodash/fp.js'
 import {
@@ -8,14 +9,48 @@ import {
 import { type Db, MongoClient } from 'mongodb'
 import ms from 'ms'
 import { setTimeout } from 'node:timers/promises'
-import { describe, expect, test } from 'vitest'
-import debug from 'debug'
+import { TimeoutError, WaitOptions, waitUntil } from 'prom-utils'
+import { assert, describe, test } from 'vitest'
+
+import { initSync, SyncOptions } from './index.js'
+
+// FIXME: Pull in `assertEventually` from mongochangestream-testing instead.
+
+/**
+ * Asserts that the provided predicate eventually returns true.
+ *
+ * @param pred - The predicate to check: an async function returning a boolean.
+ * @param failureMessage - The message to display if the predicate does not
+ * return true before the timeout.
+ * @param [waitOptions] - Options to override the default options passed into
+ * `waitUntil`.
+ *
+ * @throws AssertionError if the predicate does not return true before the
+ * timeout.
+ */
+export const assertEventually = async (
+  pred: () => Promise<boolean>,
+  failureMessage = 'Failed to satisfy predicate',
+  waitOptions: WaitOptions = {}
+) => {
+  try {
+    await waitUntil(pred, {
+      timeout: ms('60s'),
+      checkFrequency: ms('50ms'),
+      ...waitOptions,
+    })
+  } catch (e) {
+    if (e instanceof TimeoutError) {
+      assert.fail(failureMessage)
+    } else {
+      throw e
+    }
+  }
+}
 
 // Output via console.info (stdout) instead of stderr.
 // Without this debug statements are swallowed by vitest.
 debug.log = console.info.bind(console)
-
-import { initSync, SyncOptions } from './index.js'
 
 const index = 'testing'
 
@@ -79,13 +114,14 @@ describe.sequential('syncCollection', () => {
     await initElasticState(sync, db)
 
     const initialScan = await sync.runInitialScan()
-    // Wait for initial scan to complete
     await initialScan.start()
-    await setTimeout(ms('1s'))
+    // Test that all of the records are eventually synced.
+    await assertEventually(async () => {
+      const countResponse = await elasticClient.count({ index })
+      return countResponse.count == numDocs
+    }, `Less than ${numDocs} records were processed`)
     // Stop
     await initialScan.stop()
-    const countResponse = await elasticClient.count({ index })
-    expect(countResponse.count).toBe(numDocs)
   })
   test('should process records via change stream', async () => {
     const { coll, db, elasticClient } = await getConns()
@@ -95,18 +131,20 @@ describe.sequential('syncCollection', () => {
 
     const changeStream = await sync.processChangeStream()
     changeStream.start()
+    // Give change stream time to connect.
     await setTimeout(ms('1s'))
     const date = new Date()
     // Update records
     coll.updateMany({}, { $set: { createdAt: date } })
-    // Wait for the change stream events to be processed
-    await setTimeout(ms('2s'))
-    const countResponse = await elasticClient.count({
-      index,
-      query: { range: { createdAt: { gte: date } } },
-    })
+    // Test that all of the records are eventually synced.
+    await assertEventually(async () => {
+      const countResponse = await elasticClient.count({
+        index,
+        query: { range: { createdAt: { gte: date } } },
+      })
+      return countResponse.count == numDocs
+    }, `Less than ${numDocs} records were processed`)
     // Stop
     await changeStream.stop()
-    expect(countResponse.count).toBe(numDocs)
   })
 })
