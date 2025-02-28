@@ -40,3 +40,16 @@ const options = { batchSize: 1000 }
 const initialScan = await sync.runInitialScan(options)
 initialScan.start()
 ```
+
+## Run the tests locally
+
+Create a .env file with the following variables set to the appropriate values:
+
+```
+MONGO_CONN="mongodb+srv://..."
+ELASTIC_NODE='https://elastic-node-url-here.com'
+ELASTIC_USERNAME="username-here"
+ELASTIC_PASSWORD="password-here"
+```
+
+Then run `npm test` to run the tests.
