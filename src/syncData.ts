@@ -117,6 +117,7 @@ export const initSync = (
     const mappings = convertSchema(jsonSchema, options)
     return elastic.indices.putMapping({ index, ...mappings })
   }
+
   /**
    * Process change stream events.
    */
@@ -153,6 +154,7 @@ export const initSync = (
 
     handleBulkResponse(response, operationCounts, docs.length)
   }
+
   /**
    * Process initial scan documents.
    */
@@ -176,6 +178,7 @@ export const initSync = (
         ...(options?.pipeline ?? []),
       ],
     })
+
   const runInitialScan = (options?: QueueOptions & ScanOptions) =>
     sync.runInitialScan(processRecords, options)
 
