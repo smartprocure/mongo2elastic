@@ -5,13 +5,14 @@ import type { Redis } from 'ioredis'
 import _ from 'lodash/fp.js'
 import { type ChangeStreamOptions, type ScanOptions } from 'mongochangestream'
 import * as mongoChangeStream from 'mongochangestream'
+import { renameKeys } from 'mongochangestream'
 import type {
   ChangeStreamDocument,
   ChangeStreamInsertDocument,
   Collection,
   Document,
 } from 'mongodb'
-import type { QueueOptions } from 'prom-utils'
+import { type QueueOptions, rateLimit } from 'prom-utils'
 
 import { convertSchema } from './convertSchema.js'
 import type {
@@ -22,7 +23,6 @@ import type {
   SyncOptions,
 } from './types.js'
 import { indexFromCollection } from './util.js'
-import { renameKeys } from 'mongochangestream'
 
 /**
  * Filter errors from a bulk response
@@ -59,6 +59,8 @@ export const initSync = (
     return doc
   }
   const index = options.index || indexFromCollection(collection)
+  const appender = options.appender
+  const appenderLimit = options.appenderLimit || 100
   // Initialize sync
   const sync = mongoChangeStream.initSync<Events>(redis, collection, options)
   // Use emitter from mongochangestream
@@ -118,41 +120,63 @@ export const initSync = (
     return elastic.indices.putMapping({ index, ...mappings })
   }
 
-  /**
-   * Process change stream events.
-   */
-  const processChangeStreamRecords = async (docs: ChangeStreamDocument[]) => {
+  const getOperations = (docs: ChangeStreamDocument[]) => {
     const operations = []
-    const operationCounts = getInitialCounts()
+    const counts = getInitialCounts()
     for (const doc of docs) {
       if (doc.operationType === 'insert') {
-        operationCounts[doc.operationType]++
+        counts[doc.operationType]++
+        const mapped = mapper(doc.fullDocument)
         operations.push([
           { create: { _index: index, _id: doc.fullDocument._id.toString() } },
-          mapper(doc.fullDocument),
+          mapped,
         ])
       } else if (
         doc.operationType === 'update' ||
         doc.operationType === 'replace'
       ) {
-        operationCounts[doc.operationType]++
-        const document = doc.fullDocument ? mapper(doc.fullDocument) : {}
+        counts[doc.operationType]++
+        const mapped = doc.fullDocument ? mapper(doc.fullDocument) : {}
         operations.push([
           { index: { _index: index, _id: doc.documentKey._id.toString() } },
-          document,
+          mapped,
         ])
       } else if (doc.operationType === 'delete') {
-        operationCounts[doc.operationType]++
+        counts[doc.operationType]++
         operations.push([
           { delete: { _index: index, _id: doc.documentKey._id.toString() } },
         ])
       }
     }
+    return { operations, counts }
+  }
+
+  /**
+   * Process change stream events.
+   */
+  const processChangeStreamRecords = async (docs: ChangeStreamDocument[]) => {
+    const { operations, counts } = getOperations(docs)
+
+    // Append additional fields
+    if (appender) {
+      const limiter = rateLimit(appenderLimit)
+      for (const operation of operations) {
+        if (operation.length === 2) {
+          const cb = async () => {
+            const mapped = operation[1]
+            const final = _.merge(mapped, await appender(mapped))
+            operation[1] = final
+          }
+          await limiter.add(cb())
+        }
+      }
+      await limiter.finish()
+    }
     const response = await elastic.bulk({
       operations: operations.flat(),
     })
 
-    handleBulkResponse(response, operationCounts, docs.length)
+    handleBulkResponse(response, counts, docs.length)
   }
 
   /**

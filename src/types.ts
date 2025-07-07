@@ -8,7 +8,16 @@ interface RenameOption {
 }
 
 export interface SyncOptions extends RenameOption {
-  mapper?: (doc: Document) => Document
+  /**
+   * A function that can be used to append additional data to each document
+   * before it is sent to Elasticsearch. The result of the function will be
+   * deep-merged with the document.
+   */
+  appender?: (doc: Document) => Promise<Document> | Document
+  /**
+   * Limit the number of concurrent appender calls. Defaults to 100.
+   */
+  appenderLimit?: number
   index?: string
 }
 
