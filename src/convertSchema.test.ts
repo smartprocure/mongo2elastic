@@ -209,7 +209,7 @@ describe('convertSchema', () => {
       },
     })
   })
-  test('Convert MongoDB schema to Elastic with options', () => {
+  test('Convert MongoDB schema to Elastic with omit and overrides', () => {
     const options = {
       omit: ['integrations'],
       overrides: [
@@ -568,14 +568,11 @@ describe('convertSchema', () => {
       },
     })
   })
-  test('Should apply multiple updates in sequence while using isStringlike', () => {
+  test('Should apply multiple overrides in sequence while using isStringlike', () => {
     const options = {
       omit: ['integrations', 'permissions'],
       overrides: [
-        // Copy to 'all' for all string fields.
         copyTo('*', 'all', isStringlike),
-        // Additionally, copy to 'full_address' for string fields within the
-        // `addresses.address` object.
         copyTo('addresses.address.*', 'full_address', isStringlike),
       ],
     }
