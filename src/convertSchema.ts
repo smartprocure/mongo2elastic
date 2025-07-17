@@ -164,10 +164,16 @@ const overrideAndConvert =
         [...passthroughFields, ...defaultPassthroughFields],
         val
       )
-      // Handles arrays
+      // Handle arrays
       if (val.bsonType === 'array') {
-        // Unwrap arrays since ES doesn't support explicit array fields
-        return convertSchemaNode(val.items, passthrough)
+        // Convert items
+        const items = convertSchemaNode(val.items, passthrough)
+        // Handle arrays of objects (nested)
+        if (val.nested && val.items?.bsonType === 'object') {
+          return { type: 'nested', ...items }
+        }
+        // Flatten arrays since ES doesn't have an explicit array type
+        return items
       }
       return convertSchemaNode(val, passthrough)
     }
@@ -207,6 +213,7 @@ export const convertSchema = (
 
 /**
  * Helper function to manually set the Elasticsearch type for a given path.
+ * Only applicable for scalar types.
  * @example
  * setESType('latlong', 'geo_point')
  */

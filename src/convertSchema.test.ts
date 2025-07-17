@@ -307,9 +307,12 @@ describe('convertSchema', () => {
       },
     })
   })
-  test('Convert bsonType to Elastic type manually using setESType helper function', () => {
+  test('Manual type conversion using setESType and nested flag', () => {
     const options = {
-      overrides: [setESType('latlong', 'geo_point')],
+      overrides: [
+        setESType('latlong', 'geo_point'),
+        { path: 'comments', nested: true },
+      ],
     }
     const schema = {
       bsonType: 'object',
@@ -318,6 +321,18 @@ describe('convertSchema', () => {
         latlong: {
           bsonType: 'string',
         },
+        comments: {
+          bsonType: 'array',
+          items: {
+            bsonType: 'object',
+            additionalProperties: false,
+            properties: {
+              text: {
+                bsonType: 'string',
+              },
+            },
+          },
+        },
       },
     }
     const mapping = convertSchema(schema, options)
@@ -325,6 +340,15 @@ describe('convertSchema', () => {
       properties: {
         latlong: {
           type: 'geo_point',
+        },
+        comments: {
+          type: 'nested',
+          properties: {
+            text: {
+              type: 'text',
+              fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+            },
+          },
         },
       },
     })
