@@ -1,3 +1,9 @@
+# 0.55.0
+
+- Added `setESType`, `copyTo`, and `isStringlike` helper functions for schema conversion.
+- The following fields are automatically included for `passthrough`: `type`, `fields`, `copy_to`.
+- Added `nested` flag to `convertSchema` to support the nested type.
+
 # 0.54.0
 
 - Latest `mongochangestream` - Safely call p-retry, wrapping non-Error

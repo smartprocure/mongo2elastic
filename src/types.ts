@@ -1,5 +1,5 @@
 import type { JSONSchema } from 'mongochangestream'
-import type { ChangeStreamDocument, Document } from 'mongodb'
+import type { ChangeStreamDocument } from 'mongodb'
 import { type Mapper } from 'obj-walker'
 
 interface RenameOption {
@@ -8,13 +8,14 @@ interface RenameOption {
 }
 
 export interface SyncOptions extends RenameOption {
-  mapper?: (doc: Document) => Document
   index?: string
 }
 
 export interface Override extends Record<string, any> {
   path: string
   mapper?: (obj: JSONSchema, path: string) => JSONSchema
+  /** Convert an array of objects to a nested type */
+  nested?: boolean
 }
 
 export interface ConvertOptions extends RenameOption {
@@ -42,6 +43,10 @@ export interface ConvertOptions extends RenameOption {
   mapSchema?: Mapper
   omit?: string[]
   overrides?: Override[]
+  /**
+   * Fields to pass through to the mapping (if they are present)
+   * Automatically includes `type`, `fields`, and `copy_to`
+   */
   passthrough?: string[]
 }
 
