@@ -9,121 +9,122 @@ import {
 } from './convertSchema.js'
 import type { ConvertOptions } from './types.js'
 
-describe('convertSchema', () => {
-  const schema = {
-    bsonType: 'object',
-    additionalProperties: false,
-    required: ['name', 'type'],
-    properties: {
-      _id: {
-        bsonType: 'objectId',
-      },
-      parentId: {
-        bsonType: ['objectId', 'null'],
-      },
-      name: {
+const schema = {
+  bsonType: 'object',
+  additionalProperties: false,
+  required: ['name', 'type'],
+  properties: {
+    _id: {
+      bsonType: 'objectId',
+    },
+    parentId: {
+      bsonType: ['objectId', 'null'],
+    },
+    name: {
+      bsonType: 'string',
+    },
+    subType: {
+      bsonType: 'string',
+    },
+    numberOfEmployees: {
+      bsonType: 'string',
+      enum: ['1 - 5', '6 - 20', '21 - 50', '51 - 200', '201 - 500', '500+'],
+    },
+    keywords: {
+      bsonType: 'array',
+      items: {
         bsonType: 'string',
       },
-      subType: {
-        bsonType: 'string',
-      },
-      numberOfEmployees: {
-        bsonType: 'string',
-        enum: ['1 - 5', '6 - 20', '21 - 50', '51 - 200', '201 - 500', '500+'],
-      },
-      keywords: {
-        bsonType: 'array',
-        items: {
-          bsonType: 'string',
-        },
-        description: 'Some description',
-      },
-      addresses: {
-        bsonType: 'array',
-        items: {
-          bsonType: 'object',
-          additionalProperties: false,
-          properties: {
-            address: {
-              bsonType: 'object',
-              additionalProperties: false,
-              properties: {
-                address1: {
-                  bsonType: 'string',
-                },
-                address2: {
-                  bsonType: 'string',
-                },
-                city: {
-                  bsonType: 'string',
-                },
-                county: {
-                  bsonType: 'string',
-                },
-                state: {
-                  bsonType: 'string',
-                },
-                zip: {
-                  bsonType: 'string',
-                },
-                country: {
-                  bsonType: 'string',
-                },
-                latitude: {
-                  bsonType: 'number',
-                },
-                longitude: {
-                  bsonType: 'number',
-                },
-                timezone: {
-                  bsonType: 'string',
-                },
-              },
-            },
-            name: {
-              bsonType: 'string',
-            },
-            isPrimary: {
-              bsonType: 'bool',
-            },
-          },
-        },
-      },
-      logo: {
-        bsonType: 'string',
-      },
-      verified: {
-        bsonType: 'bool',
-      },
-      partner: {
-        bsonType: 'string',
-      },
-      integrations: {
+      description: 'Some description',
+    },
+    addresses: {
+      bsonType: 'array',
+      items: {
         bsonType: 'object',
-        additionalProperties: true,
+        additionalProperties: false,
         properties: {
-          stripe: {
+          address: {
             bsonType: 'object',
-            additionalProperties: true,
+            additionalProperties: false,
             properties: {
-              priceId: {
+              address1: {
+                bsonType: 'string',
+              },
+              address2: {
+                bsonType: 'string',
+              },
+              city: {
+                bsonType: 'string',
+              },
+              county: {
+                bsonType: 'string',
+              },
+              state: {
+                bsonType: 'string',
+              },
+              zip: {
+                bsonType: 'string',
+              },
+              country: {
+                bsonType: 'string',
+              },
+              latitude: {
+                bsonType: 'number',
+              },
+              longitude: {
+                bsonType: 'number',
+              },
+              timezone: {
                 bsonType: 'string',
               },
             },
           },
-        },
-      },
-      createdAt: {
-        bsonType: 'date',
-      },
-      permissions: {
-        bsonType: 'array',
-        items: {
-          bsonType: 'string',
+          name: {
+            bsonType: 'string',
+          },
+          isPrimary: {
+            bsonType: 'bool',
+          },
         },
       },
     },
-  }
+    logo: {
+      bsonType: 'string',
+    },
+    verified: {
+      bsonType: 'bool',
+    },
+    partner: {
+      bsonType: 'string',
+    },
+    integrations: {
+      bsonType: 'object',
+      additionalProperties: true,
+      properties: {
+        stripe: {
+          bsonType: 'object',
+          additionalProperties: true,
+          properties: {
+            priceId: {
+              bsonType: 'string',
+            },
+          },
+        },
+      },
+    },
+    createdAt: {
+      bsonType: 'date',
+    },
+    permissions: {
+      bsonType: 'array',
+      items: {
+        bsonType: 'string',
+      },
+    },
+  },
+}
+
+describe('convertSchema', () => {
   test('Convert MongoDB schema to Elastic with no options', () => {
     const mapping = convertSchema(schema)
     expect(mapping).toEqual({
