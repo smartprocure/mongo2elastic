@@ -5,7 +5,7 @@ import { minimatch } from 'minimatch'
 import { type JSONSchema, traverseSchema } from 'mongochangestream'
 import { map, type Node, walker } from 'obj-walker'
 
-import { ConvertOptions } from './types.js'
+import { ConvertOptions, Override } from './types.js'
 import { arrayStartsWith } from './util.js'
 
 export const Mongo2ElasticError = makeError('Mongo2ElasticError')
@@ -63,93 +63,82 @@ const convertSchemaNode = (obj: JSONSchema, passthrough: object) => {
 const cleanupPath = _.pullAll(['properties', 'items'])
 
 /**
- * Convert MongoDB JSON schema to Elasticsearch mapping.
- *
- * There are options that allow you to preprocess nodes, omit fields, rename
- * fields, and change the BSON type for fields (e.g. when a more specific
- * numeric type is needed). @see {@link ConvertOptions} for details.
+ * Omits fields from the schema and defaults to first type if multi-valued
  */
-export const convertSchema = (
-  jsonSchema: JSONSchema,
-  options: ConvertOptions = {}
-) => {
-  // Handle options
-  const { mapSchema } = options
-  const omit = options.omit ? options.omit.map(_.toPath) : []
-  const overrides = options.overrides || []
-  const passthroughFields = options.passthrough || []
+const preprocess = (omit: string[][]) => (node: Node) => {
+  const { val, path } = node
+  if (val?.bsonType) {
+    const cleanPath = cleanupPath(path)
+    // Optionally omit field
+    if (omit.find(_.isEqual(cleanPath))) {
+      return
+    }
+    // Use the first type if multi-valued
+    if (Array.isArray(val.bsonType)) {
+      val.bsonType = val.bsonType[0]
+    }
+  }
+  return val
+}
 
-  // Map over the schema (low-level)
-  if (mapSchema) {
-    jsonSchema = map(jsonSchema, mapSchema)
+/**
+ * Renames fields in the schema
+ * @throws Mongo2ElasticError if the rename is invalid
+ */
+const handleRename = (schema: JSONSchema, rename: Record<string, string>) => {
+  for (const dottedPath in rename) {
+    const oldPath = dottedPath.split('.')
+    const newPath = rename[dottedPath].split('.')
+    // Only allow renames such that nodes still keep the same parent
+    if (!arrayStartsWith(oldPath, newPath.slice(0, -1))) {
+      throw new Mongo2ElasticError(
+        `Rename path prefix does not match: ${dottedPath}`
+      )
+    }
   }
 
-  const omitNodes = (node: Node) => {
-    const { val, path } = node
-    if (val?.bsonType) {
-      const cleanPath = cleanupPath(path)
-      // Optionally omit field
-      if (omit.find(_.isEqual(cleanPath))) {
+  // Walk every subschema, renaming properties
+  walker(
+    schema,
+    ({ val: { bsonType, properties }, path }) => {
+      // Only objects can have their properties renamed
+      if (bsonType !== 'object' || !properties) {
         return
       }
-      // Use the first type if multi-valued
-      if (Array.isArray(val.bsonType)) {
-        val.bsonType = val.bsonType[0]
-      }
-    }
-    return val
-  }
+      const cleanPath = _.pull('_items', path)
 
-  const handleRename = (schema: JSONSchema, rename: Record<string, string>) => {
-    for (const dottedPath in rename) {
-      const oldPath = dottedPath.split('.')
-      const newPath = rename[dottedPath].split('.')
-      // Only allow renames such that nodes still keep the same parent
-      if (!arrayStartsWith(oldPath, newPath.slice(0, -1))) {
-        throw new Mongo2ElasticError(
-          `Rename path prefix does not match: ${dottedPath}`
-        )
-      }
-    }
+      for (const key in properties) {
+        const childPath = [...cleanPath, key].join('.')
 
-    // Walk every subschema, renaming properties
-    walker(
-      schema,
-      ({ val: { bsonType, properties }, path }) => {
-        // Only objects can have their properties renamed
-        if (bsonType !== 'object' || !properties) {
-          return
+        // Property name to which property `key` should be renamed to
+        const newProperty = _.last(rename[childPath]?.split('.')) as
+          | string
+          | undefined
+
+        // Make sure we don't overwrite existing properties
+        if (newProperty !== undefined && newProperty in properties) {
+          throw new Mongo2ElasticError(
+            `Renaming ${childPath} to ${rename[childPath]} will overwrite property "${newProperty}"`
+          )
         }
-        const cleanPath = _.pull('_items', path)
 
-        for (const key in properties) {
-          const childPath = [...cleanPath, key].join('.')
-
-          // Property name to which property `key` should be renamed to
-          const newProperty = _.last(rename[childPath]?.split('.')) as
-            | string
-            | undefined
-
-          // Make sure we don't overwrite existing properties
-          if (newProperty !== undefined && newProperty in properties) {
-            throw new Mongo2ElasticError(
-              `Renaming ${childPath} to ${rename[childPath]} will overwrite property "${newProperty}"`
-            )
-          }
-
-          // Actually rename property
-          if (newProperty) {
-            const child = properties[key]
-            delete properties[key]
-            properties[newProperty] = child
-          }
+        // Actually rename property
+        if (newProperty) {
+          const child = properties[key]
+          delete properties[key]
+          properties[newProperty] = child
         }
-      },
-      { traverse: traverseSchema }
-    )
-  }
+      }
+    },
+    { traverse: traverseSchema }
+  )
+}
 
-  const overrideAndConvert = (node: Node) => {
+/**
+ * Applies overrides and converts the schema node to an Elasticsearch mapping
+ */
+const overrideAndConvert =
+  (overrides: Override[], passthroughFields: string[]) => (node: Node) => {
     let { val } = node
     const { path } = node
     if (val?.bsonType) {
@@ -185,12 +174,35 @@ export const convertSchema = (
     return val
   }
 
-  // Omit nodes
-  const schema = map(jsonSchema, omitNodes) as JSONSchema
+/**
+ * Convert MongoDB JSON schema to Elasticsearch mapping.
+ *
+ * There are options that allow you to preprocess nodes, omit fields, rename
+ * fields, and change the BSON type for fields (e.g. when a more specific
+ * numeric type is needed).
+ * @see {@link ConvertOptions} for details.
+ */
+export const convertSchema = (
+  jsonSchema: JSONSchema,
+  options: ConvertOptions = {}
+) => {
+  // Handle options
+  const { mapSchema } = options
+  const omit = options.omit ? options.omit.map(_.toPath) : []
+  const overrides = options.overrides || []
+  const passthroughFields = options.passthrough || []
+
+  // Map over the schema (low-level)
+  if (mapSchema) {
+    jsonSchema = map(jsonSchema, mapSchema)
+  }
+  // Preprocess the schema
+  const schema = map(jsonSchema, preprocess(omit)) as JSONSchema
   // Rename fields
   handleRename(schema, { _id: '_mongoId', ...options.rename })
   // Apply overrides and convert to ES mapping
-  return map(schema, overrideAndConvert) as estypes.MappingPropertyBase
+  const mapping = map(schema, overrideAndConvert(overrides, passthroughFields))
+  return mapping as estypes.MappingPropertyBase
 }
 
 /**
