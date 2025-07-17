@@ -79,6 +79,7 @@ export const convertSchema = (
   const overrides = options.overrides || []
   const passthroughFields = options.passthrough || []
 
+  // Map over the schema (low-level)
   if (mapSchema) {
     jsonSchema = map(jsonSchema, mapSchema)
   }
@@ -184,9 +185,11 @@ export const convertSchema = (
     return val
   }
 
-  // Recursively convert the schema
+  // Omit nodes
   const schema = map(jsonSchema, omitNodes) as JSONSchema
+  // Rename fields
   handleRename(schema, { _id: '_mongoId', ...options.rename })
+  // Apply overrides and convert to ES mapping
   return map(schema, overrideAndConvert) as estypes.MappingPropertyBase
 }
 
