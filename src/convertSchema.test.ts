@@ -575,9 +575,6 @@ describe('convertSchema', () => {
         copyTo('*', 'all', isStringlike),
         // Additionally, copy to 'full_address' for string fields within the
         // `addresses.address` object.
-        //
-        // This should result in `copy_to: ['all', 'full_address']`, because
-        // both the above mapper and this one should be applied in sequence.
         copyTo('addresses.address.*', 'full_address', isStringlike),
       ],
     }
