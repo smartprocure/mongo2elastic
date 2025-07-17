@@ -1,8 +1,12 @@
 import _ from 'lodash/fp.js'
-import { JSONSchema } from 'mongochangestream'
 import { describe, expect, test } from 'vitest'
 
-import { convertSchema } from './convertSchema.js'
+import {
+  convertSchema,
+  copyTo,
+  isStringlike,
+  setESType,
+} from './convertSchema.js'
 import type { ConvertOptions } from './types.js'
 
 describe('convertSchema', () => {
@@ -19,7 +23,6 @@ describe('convertSchema', () => {
       },
       name: {
         bsonType: 'string',
-        copy_to: 'searchbar',
       },
       subType: {
         bsonType: 'string',
@@ -33,7 +36,6 @@ describe('convertSchema', () => {
         items: {
           bsonType: 'string',
         },
-        copy_to: 'searchbar',
         description: 'Some description',
       },
       addresses: {
@@ -48,31 +50,24 @@ describe('convertSchema', () => {
               properties: {
                 address1: {
                   bsonType: 'string',
-                  copy_to: 'full_address',
                 },
                 address2: {
                   bsonType: 'string',
-                  copy_to: 'full_address',
                 },
                 city: {
                   bsonType: 'string',
-                  copy_to: 'full_address',
                 },
                 county: {
                   bsonType: 'string',
-                  copy_to: 'full_address',
                 },
                 state: {
                   bsonType: 'string',
-                  copy_to: 'full_address',
                 },
                 zip: {
                   bsonType: 'string',
-                  copy_to: 'full_address',
                 },
                 country: {
                   bsonType: 'string',
-                  copy_to: 'full_address',
                 },
                 latitude: {
                   bsonType: 'number',
@@ -130,8 +125,8 @@ describe('convertSchema', () => {
     },
   }
   test('Convert MongoDB schema to Elastic with no options', () => {
-    const mappings = convertSchema(schema)
-    expect(mappings).toEqual({
+    const mapping = convertSchema(schema)
+    expect(mapping).toEqual({
       properties: {
         parentId: { type: 'keyword' },
         name: {
@@ -224,16 +219,14 @@ describe('convertSchema', () => {
           fields: { exact: { analyzer: 'exact', type: 'text' } },
         },
       ],
-      passthrough: ['copy_to', 'fields'],
     }
-    const mappings = convertSchema(schema, options)
-    expect(mappings).toEqual({
+    const mapping = convertSchema(schema, options)
+    expect(mapping).toEqual({
       properties: {
         parentId: { type: 'keyword' },
         name: {
           type: 'text',
           fields: { keyword: { type: 'keyword', ignore_above: 256 } },
-          copy_to: 'searchbar',
         },
         subType: {
           type: 'text',
@@ -243,7 +236,6 @@ describe('convertSchema', () => {
         keywords: {
           type: 'text',
           fields: { keyword: { type: 'keyword', ignore_above: 256 } },
-          copy_to: 'searchbar',
         },
         addresses: {
           properties: {
@@ -252,37 +244,30 @@ describe('convertSchema', () => {
                 address1: {
                   type: 'text',
                   fields: { keyword: { type: 'keyword', ignore_above: 256 } },
-                  copy_to: 'full_address',
                 },
                 address2: {
                   type: 'text',
                   fields: { keyword: { type: 'keyword', ignore_above: 256 } },
-                  copy_to: 'full_address',
                 },
                 city: {
                   type: 'text',
                   fields: { keyword: { type: 'keyword', ignore_above: 256 } },
-                  copy_to: 'full_address',
                 },
                 county: {
                   type: 'text',
                   fields: { keyword: { type: 'keyword', ignore_above: 256 } },
-                  copy_to: 'full_address',
                 },
                 state: {
                   type: 'text',
                   fields: { keyword: { type: 'keyword', ignore_above: 256 } },
-                  copy_to: 'full_address',
                 },
                 zip: {
                   type: 'text',
                   fields: { keyword: { type: 'keyword', ignore_above: 256 } },
-                  copy_to: 'full_address',
                 },
                 country: {
                   type: 'text',
                   fields: { keyword: { type: 'keyword', ignore_above: 256 } },
-                  copy_to: 'full_address',
                 },
                 latitude: { type: 'double' },
                 longitude: { type: 'double' },
@@ -321,7 +306,64 @@ describe('convertSchema', () => {
       },
     })
   })
-  test('Convert MongoDB schema to Elastic with mapper', () => {
+  test('Convert bsonType to Elastic type manually using setESType helper function', () => {
+    const options = {
+      overrides: [setESType('latlong', 'geo_point')],
+    }
+    const schema = {
+      bsonType: 'object',
+      additionalProperties: false,
+      properties: {
+        latlong: {
+          bsonType: 'string',
+        },
+      },
+    }
+    const mapping = convertSchema(schema, options)
+    expect(mapping).toEqual({
+      properties: {
+        latlong: {
+          type: 'geo_point',
+        },
+      },
+    })
+  })
+  test('Copy to grouped field using copyTo helper function', () => {
+    const options = {
+      overrides: [
+        copyTo('firstName', ['full_name', 'all']),
+        copyTo('lastName', ['full_name', 'all']),
+      ],
+    }
+    const schema = {
+      bsonType: 'object',
+      additionalProperties: false,
+      properties: {
+        firstName: {
+          bsonType: 'string',
+        },
+        lastName: {
+          bsonType: 'string',
+        },
+      },
+    }
+    const mapping = convertSchema(schema, options)
+    expect(mapping).toEqual({
+      properties: {
+        firstName: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          copy_to: ['full_name', 'all'],
+        },
+        lastName: {
+          type: 'text',
+          fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          copy_to: ['full_name', 'all'],
+        },
+      },
+    })
+  })
+  test('Convert MongoDB schema to Elastic with mapper and passthrough', () => {
     const options: ConvertOptions = {
       omit: ['integrations', 'permissions'],
       overrides: [
@@ -329,34 +371,32 @@ describe('convertSchema', () => {
           path: '*',
           mapper(obj) {
             if (obj.bsonType === 'string') {
-              return { ...obj, copy_to: 'foo' }
+              return { ...obj, fielddata: true }
             }
             return obj
           },
         },
       ],
-      passthrough: ['copy_to'],
+      passthrough: ['fielddata'],
     }
-    const mappings = convertSchema(schema, options)
-    expect(mappings).toEqual({
+    const mapping = convertSchema(schema, options)
+    expect(mapping).toEqual({
       properties: {
-        _mongoId: { type: 'keyword' },
         parentId: { type: 'keyword' },
         name: {
           type: 'text',
           fields: { keyword: { type: 'keyword', ignore_above: 256 } },
-          copy_to: 'foo',
+          fielddata: true,
         },
         subType: {
           type: 'text',
           fields: { keyword: { type: 'keyword', ignore_above: 256 } },
-          copy_to: 'foo',
+          fielddata: true,
         },
-        numberOfEmployees: { type: 'keyword', copy_to: 'foo' },
+        numberOfEmployees: { type: 'keyword', fielddata: true },
         keywords: {
           type: 'text',
           fields: { keyword: { type: 'keyword', ignore_above: 256 } },
-          copy_to: 'searchbar',
         },
         addresses: {
           properties: {
@@ -365,51 +405,51 @@ describe('convertSchema', () => {
                 address1: {
                   type: 'text',
                   fields: { keyword: { type: 'keyword', ignore_above: 256 } },
-                  copy_to: 'foo',
+                  fielddata: true,
                 },
                 address2: {
                   type: 'text',
                   fields: { keyword: { type: 'keyword', ignore_above: 256 } },
-                  copy_to: 'foo',
+                  fielddata: true,
                 },
                 city: {
                   type: 'text',
                   fields: { keyword: { type: 'keyword', ignore_above: 256 } },
-                  copy_to: 'foo',
+                  fielddata: true,
                 },
                 county: {
                   type: 'text',
                   fields: { keyword: { type: 'keyword', ignore_above: 256 } },
-                  copy_to: 'foo',
+                  fielddata: true,
                 },
                 state: {
                   type: 'text',
                   fields: { keyword: { type: 'keyword', ignore_above: 256 } },
-                  copy_to: 'foo',
+                  fielddata: true,
                 },
                 zip: {
                   type: 'text',
                   fields: { keyword: { type: 'keyword', ignore_above: 256 } },
-                  copy_to: 'foo',
+                  fielddata: true,
                 },
                 country: {
                   type: 'text',
                   fields: { keyword: { type: 'keyword', ignore_above: 256 } },
-                  copy_to: 'foo',
+                  fielddata: true,
                 },
                 latitude: { type: 'long' },
                 longitude: { type: 'long' },
                 timezone: {
                   type: 'text',
                   fields: { keyword: { type: 'keyword', ignore_above: 256 } },
-                  copy_to: 'foo',
+                  fielddata: true,
                 },
               },
             },
             name: {
               type: 'text',
               fields: { keyword: { type: 'keyword', ignore_above: 256 } },
-              copy_to: 'foo',
+              fielddata: true,
             },
             isPrimary: { type: 'boolean' },
           },
@@ -417,15 +457,16 @@ describe('convertSchema', () => {
         logo: {
           type: 'text',
           fields: { keyword: { type: 'keyword', ignore_above: 256 } },
-          copy_to: 'foo',
+          fielddata: true,
         },
         verified: { type: 'boolean' },
         partner: {
           type: 'text',
           fields: { keyword: { type: 'keyword', ignore_above: 256 } },
-          copy_to: 'foo',
+          fielddata: true,
         },
         createdAt: { type: 'date' },
+        _mongoId: { type: 'keyword' },
       },
     })
   })
@@ -433,10 +474,9 @@ describe('convertSchema', () => {
     const options = {
       omit: ['integrations', 'permissions'],
       overrides: [{ path: '*', copy_to: 'all' }],
-      passthrough: ['copy_to'],
     }
-    const mappings = convertSchema(schema, options)
-    expect(mappings).toEqual({
+    const mapping = convertSchema(schema, options)
+    expect(mapping).toEqual({
       properties: {
         _mongoId: { type: 'keyword', copy_to: 'all' },
         parentId: { type: 'keyword', copy_to: 'all' },
@@ -527,39 +567,23 @@ describe('convertSchema', () => {
       },
     })
   })
-  test('Should apply multiple updates in sequence', () => {
+  test('Should apply multiple updates in sequence while using isStringlike', () => {
     const options = {
       omit: ['integrations', 'permissions'],
       overrides: [
         // Copy to 'all' for all string fields.
-        {
-          path: '*',
-          mapper: (obj: JSONSchema) => ({
-            ...obj,
-            ...((obj.bsonType === 'string' ||
-              obj.items?.bsonType === 'string') && { copy_to: ['all'] }),
-          }),
-        },
+        copyTo('*', 'all', isStringlike),
         // Additionally, copy to 'full_address' for string fields within the
         // `addresses.address` object.
         //
         // This should result in `copy_to: ['all', 'full_address']`, because
         // both the above mapper and this one should be applied in sequence.
-        {
-          path: 'addresses.address.*',
-          mapper: (obj: JSONSchema) => ({
-            ...obj,
-            ...(obj.bsonType === 'string' && {
-              copy_to: [...(obj.copy_to || []), 'full_address'],
-            }),
-          }),
-        },
+        copyTo('addresses.address.*', 'full_address', isStringlike),
       ],
-      passthrough: ['copy_to'],
     }
 
-    const mappings = convertSchema(schema, options)
-    expect(mappings).toEqual({
+    const mapping = convertSchema(schema, options)
+    expect(mapping).toEqual({
       properties: {
         _mongoId: { type: 'keyword' },
         parentId: { type: 'keyword' },
@@ -654,14 +678,13 @@ describe('convertSchema', () => {
     const options = {
       omit: ['integrations', 'permissions'],
       overrides: [{ path: '*', copy_to: 'all' }],
-      passthrough: ['copy_to'],
       rename: {
         numberOfEmployees: 'numEmployees',
         'addresses.address.address1': 'addresses.address.street',
       },
     }
-    const mappings = convertSchema(schema, options)
-    expect(mappings).toEqual({
+    const mapping = convertSchema(schema, options)
+    expect(mapping).toEqual({
       properties: {
         _mongoId: { type: 'keyword', copy_to: 'all' },
         parentId: { type: 'keyword', copy_to: 'all' },
@@ -772,30 +795,29 @@ describe('convertSchema', () => {
   })
   describe('the `mapSchema` option', () => {
     test('can replace a leaf node', () => {
-      expect(
-        convertSchema(schema, {
-          mapSchema: ({ path, val }) => {
-            if (
-              _.isEqual(path, [
-                'properties',
-                'addresses',
-                'items',
-                'properties',
-                'address',
-                'properties',
-                'zip',
-                'bsonType',
-              ])
-            ) {
-              // Was originally 'string'. In the expected output below, 'text'
-              // is replaced with 'long'.
-              return 'number'
-            }
+      const mapping = convertSchema(schema, {
+        mapSchema: ({ path, val }) => {
+          if (
+            _.isEqual(path, [
+              'properties',
+              'addresses',
+              'items',
+              'properties',
+              'address',
+              'properties',
+              'zip',
+              'bsonType',
+            ])
+          ) {
+            // Was originally 'string'. In the expected output below, 'text'
+            // is replaced with 'long'.
+            return 'number'
+          }
 
-            return val
-          },
-        })
-      ).toEqual({
+          return val
+        },
+      })
+      expect(mapping).toEqual({
         properties: {
           parentId: { type: 'keyword' },
           name: {

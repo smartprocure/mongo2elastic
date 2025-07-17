@@ -23,6 +23,8 @@ const bsonTypeToElastic: Record<string, string> = {
   bool: 'boolean',
 }
 
+const defaultPassthroughFields = ['type', 'fields', 'copy_to']
+
 const convertSchemaNode = (obj: JSONSchema, passthrough: object) => {
   if (obj.bsonType === 'object') {
     // Use flattened type since object can have arbitrary keys
@@ -55,6 +57,7 @@ const convertSchemaNode = (obj: JSONSchema, passthrough: object) => {
   if (elasticType) {
     return { type: elasticType, ...passthrough }
   }
+  return passthrough
 }
 
 const cleanupPath = _.pullAll(['properties', 'items'])
@@ -74,6 +77,7 @@ export const convertSchema = (
   const { mapSchema } = options
   const omit = options.omit ? options.omit.map(_.toPath) : []
   const overrides = options.overrides || []
+  const passthroughFields = options.passthrough || []
 
   if (mapSchema) {
     jsonSchema = map(jsonSchema, mapSchema)
@@ -166,9 +170,10 @@ export const convertSchema = (
           : obj
       }, val)
 
-      const passthrough = options.passthrough
-        ? _.pick(options.passthrough, val)
-        : {}
+      const passthrough = _.pick(
+        [...passthroughFields, ...defaultPassthroughFields],
+        val
+      )
       // Handles arrays
       if (val.bsonType === 'array') {
         // Unwrap arrays since ES doesn't support explicit array fields
@@ -184,3 +189,50 @@ export const convertSchema = (
   handleRename(schema, { _id: '_mongoId', ...options.rename })
   return map(schema, overrideAndConvert) as estypes.MappingPropertyBase
 }
+
+/**
+ * Helper function to manually set the Elasticsearch type for a given path.
+ * @example
+ * setESType('latlong', 'geo_point')
+ */
+export const setESType = (path: string, type: string) => ({
+  path,
+  mapper: ({ bsonType, ...rest }: JSONSchema) => ({ ...rest, type }),
+})
+
+/**
+ * Generate an override for all fields that match the provided `path` pattern
+ * and (optional) `condition`, adding the provided `groupField` to the
+ * `copy_to` array. Ensures that any existing `copy_to` values are preserved.
+ *
+ * @param path - the path pattern to match
+ * @param groupField - the group field(s) to add to this mapping's `copy_to` array
+ * @param [predicate] - an optional function that must return true in order for
+ * the override to be applicable to this mapping
+ */
+export const copyTo = (
+  path: string,
+  groupField: string | string[],
+  predicate?: (obj: JSONSchema) => boolean
+) => ({
+  path,
+  mapper: (obj: JSONSchema) => {
+    if (predicate && !predicate(obj)) {
+      return obj
+    }
+    // Ensure this value is an array
+    const existingGroupFields: string[] = obj.copy_to
+      ? _.castArray(obj.copy_to)
+      : []
+    const newGroupFields = _.castArray(groupField)
+
+    return { ...obj, copy_to: [...existingGroupFields, ...newGroupFields] }
+  },
+})
+
+/**
+ * Helper function to determine if a field is stringlike.
+ * @returns true if the field is a string or an array of strings
+ */
+export const isStringlike = (obj: JSONSchema) =>
+  obj.bsonType === 'string' || obj.items?.bsonType === 'string'

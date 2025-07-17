@@ -42,6 +42,10 @@ export interface ConvertOptions extends RenameOption {
   mapSchema?: Mapper
   omit?: string[]
   overrides?: Override[]
+  /**
+   * Fields to pass through to the mapping (if they are present)
+   * Automatically includes `type`, `fields`, and `copy_to`
+   */
   passthrough?: string[]
 }
 
