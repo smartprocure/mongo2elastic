@@ -1,3 +1,7 @@
+# 0.56.0
+
+- Latest `mongochangestream`
+
 # 0.55.0
 
 - Added `setESType`, `copyTo`, and `isStringlike` helper functions for schema conversion.
