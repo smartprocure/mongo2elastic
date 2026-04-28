@@ -1,3 +1,7 @@
+# 0.58.0
+
+- Fixed `process` emit event. Doesn't output `changeStream: true` for initial scan.
+
 # 0.57.0
 
 - Bumped deps
