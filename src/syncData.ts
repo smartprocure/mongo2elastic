@@ -5,12 +5,14 @@ import type { Redis } from 'ioredis'
 import _ from 'lodash/fp.js'
 import { type ChangeStreamOptions, type ScanOptions } from 'mongochangestream'
 import * as mongoChangeStream from 'mongochangestream'
+import { renameKeys } from 'mongochangestream'
 import type {
   ChangeStreamDocument,
   ChangeStreamInsertDocument,
   Collection,
   Document,
 } from 'mongodb'
+import { compact } from 'obj-walker'
 import type { QueueOptions } from 'prom-utils'
 
 import { convertSchema } from './convertSchema.js'
@@ -22,7 +24,6 @@ import type {
   SyncOptions,
 } from './types.js'
 import { indexFromCollection } from './util.js'
-import { renameKeys } from 'mongochangestream'
 
 /**
  * Filter errors from a bulk response
@@ -36,16 +37,13 @@ const getBulkErrors = (response: BulkResponse) =>
       item.update?.error
   )
 
-const getInitialCounts = () => {
-  const operationTypes = ['insert', 'update', 'replace', 'delete']
-  const counts: Record<string, number> = {}
-  for (const operationType of operationTypes) {
-    counts[operationType] = 0
-  }
-  return counts
-}
-
 const debug = _debug('mongo2elastic:sync')
+
+interface Metadata {
+  operationCounts: OperationCounts
+  numDocs: number
+  changeStream?: true
+}
 
 export const initSync = (
   redis: Redis,
@@ -63,15 +61,13 @@ export const initSync = (
   const sync = mongoChangeStream.initSync<Events>(redis, collection, options)
   // Use emitter from mongochangestream
   const emitter = sync.emitter
+  const compactOpts = { removeUndefined: true }
   const emit = (event: Events, data: object) => {
-    emitter.emit(event, { type: event, ...data })
+    emitter.emit(event, compact({ type: event, ...data }, compactOpts))
   }
 
-  const handleBulkResponse = (
-    response: BulkResponse,
-    operationCounts: OperationCounts,
-    numDocs: number
-  ) => {
+  const handleResponse = (response: BulkResponse, metadata: Metadata) => {
+    const { operationCounts, numDocs, changeStream } = metadata
     // There were errors
     if (response.errors) {
       const errors = getBulkErrors(response)
@@ -81,13 +77,13 @@ export const initSync = (
         success: numDocs - numErrors,
         fail: numErrors,
         errors,
-        changeStream: true,
+        changeStream,
         operationCounts,
       } as ProcessEvent)
     } else {
       emit('process', {
         success: numDocs,
-        changeStream: true,
+        changeStream,
         operationCounts,
       } as ProcessEvent)
     }
@@ -123,10 +119,16 @@ export const initSync = (
    */
   const processChangeStreamRecords = async (docs: ChangeStreamDocument[]) => {
     const operations = []
-    const operationCounts = getInitialCounts()
+    const operationCounts: OperationCounts = {}
+    const numDocs = docs.length
+
     for (const doc of docs) {
+      const incCount = () =>
+        (operationCounts[doc.operationType] =
+          (operationCounts[doc.operationType] ?? 0) + 1)
+
       if (doc.operationType === 'insert') {
-        operationCounts[doc.operationType]++
+        incCount()
         operations.push([
           { create: { _index: index, _id: doc.fullDocument._id.toString() } },
           mapper(doc.fullDocument),
@@ -135,14 +137,14 @@ export const initSync = (
         doc.operationType === 'update' ||
         doc.operationType === 'replace'
       ) {
-        operationCounts[doc.operationType]++
+        incCount()
         const document = doc.fullDocument ? mapper(doc.fullDocument) : {}
         operations.push([
           { index: { _index: index, _id: doc.documentKey._id.toString() } },
           document,
         ])
       } else if (doc.operationType === 'delete') {
-        operationCounts[doc.operationType]++
+        incCount()
         operations.push([
           { delete: { _index: index, _id: doc.documentKey._id.toString() } },
         ])
@@ -152,7 +154,8 @@ export const initSync = (
       operations: operations.flat(),
     })
 
-    handleBulkResponse(response, operationCounts, docs.length)
+    const metadata: Metadata = { operationCounts, numDocs, changeStream: true }
+    handleResponse(response, metadata)
   }
 
   /**
@@ -160,6 +163,8 @@ export const initSync = (
    */
   const processRecords = async (docs: ChangeStreamInsertDocument[]) => {
     const operationCounts = { insert: docs.length }
+    const numDocs = docs.length
+
     const response = await elastic.bulk({
       operations: docs.flatMap((doc) => [
         { create: { _index: index, _id: doc.fullDocument._id } },
@@ -167,7 +172,8 @@ export const initSync = (
       ]),
     })
 
-    handleBulkResponse(response, operationCounts, docs.length)
+    const metadata: Metadata = { operationCounts, numDocs }
+    handleResponse(response, metadata)
   }
 
   const processChangeStream = (options?: QueueOptions & ChangeStreamOptions) =>

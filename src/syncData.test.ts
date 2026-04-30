@@ -44,6 +44,7 @@ const getSync = async (options?: SyncOptions) => {
   const { redis, coll, elasticClient } = await getConns()
   const sync = initSync(redis, coll, elasticClient, { ...options, index })
   sync.emitter.on('stateChange', console.log)
+  sync.emitter.on('process', console.log)
   return sync
 }
 
